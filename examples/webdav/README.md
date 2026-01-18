@@ -1,6 +1,6 @@
 # Go WebDAV Server
 
-This is a simple Go WebDAV server implementation using the `golang.org/x/net/webdav` package. The `edgeflare/pgo/middleware` package is used to provide middleware for request ID, CORS, and logging.
+This is a simple Go WebDAV server implementation using the `golang.org/x/net/webdav` package. The `edgeflare/pigo/middleware` package is used to provide middleware for request ID, CORS, and logging.
 
 ## Features
 
@@ -27,7 +27,7 @@ This is a simple Go WebDAV server implementation using the `golang.org/x/net/web
 ## Running the Server
 
 1. Make sure you have Go installed.
-2. Install the required dependencies: `go get golang.org/x/net/webdav github.com/edgeflare/pgo/middleware`
+2. Install the required dependencies: `go get golang.org/x/net/webdav github.com/edgeflare/pigo/middleware`
 3. Create a directory named `webdav-dir` to store your files.
 4. Run the server: `go run main.go`
 5. The server will start listening on `http://localhost:8080`.

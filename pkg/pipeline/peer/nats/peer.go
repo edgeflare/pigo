@@ -8,8 +8,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"github.com/nats-io/nats.go"
 )
 
@@ -52,7 +52,7 @@ func (p *PeerNATS) Connect(config json.RawMessage, _ ...any) error {
 	if len(p.Config.Servers) == 0 {
 		p.Config.Servers = []string{nats.DefaultURL}
 	}
-	p.Config.SubjectPrefix = cmp.Or(p.Config.SubjectPrefix, "pgo")
+	p.Config.SubjectPrefix = cmp.Or(p.Config.SubjectPrefix, "pigo")
 	p.Config.Stream = cmp.Or(p.Config.Stream, fmt.Sprintf("%s-stream", p.Config.SubjectPrefix))
 
 	p.subject = fmt.Sprintf("%s.>", p.Config.SubjectPrefix)

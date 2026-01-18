@@ -3,8 +3,8 @@ package middleware
 import (
 	"context"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
-	"github.com/edgeflare/pgo/pkg/util"
+	"github.com/edgeflare/pigo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/util"
 )
 
 // AuthzResponse contains authorization result.

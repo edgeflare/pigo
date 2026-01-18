@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
-	mw "github.com/edgeflare/pgo/pkg/httputil/middleware"
-	"github.com/edgeflare/pgo/pkg/pgx"
+	"github.com/edgeflare/pigo/pkg/httputil"
+	mw "github.com/edgeflare/pigo/pkg/httputil/middleware"
+	"github.com/edgeflare/pigo/pkg/pgx"
 )
 
 func main() {

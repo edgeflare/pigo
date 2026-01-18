@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 type FilterConfig struct {

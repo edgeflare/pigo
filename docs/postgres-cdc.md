@@ -1,9 +1,9 @@
 # Stream Postgres changes to NATS, MQTT, Kafka, Clickhouse, etc
 
-1. Start Postgres, NATS, Kafka, MQTT broker and pgo pipeline as containers
+1. Start Postgres, NATS, Kafka, MQTT broker and pigo pipeline as containers
 
 ```sh
-git clone git@github.com:edgeflare/pgo.git
+git clone git@github.com:edgeflare/pigo.git
 
 make image
 
@@ -13,11 +13,11 @@ make up # docker compose up
 ```
 
 
-optionally try pgo locally
+optionally try pigo locally
 
 ```sh
-go install github.com/edgeflare/pgo@latest # or make build
-pgo pipeline --config pkg/config/example.config.yaml
+go install github.com/edgeflare/pigo@latest # or make build
+pigo pipeline --config pkg/config/example.config.yaml
 ```
 
 2. Postgres
@@ -56,11 +56,11 @@ CREATE TABLE IF NOT EXISTS  another_schema.transformed_users (
 );
 ```
 
-pgo caches the table schemas for simpler parsing of CDC events (rows). To update pgo cache with newly created tables,
-either `docker restart docs_pgo_1` or `NOTIFY` it to reload cache by executing on database
+pigo caches the table schemas for simpler parsing of CDC events (rows). To update pigo cache with newly created tables,
+either `docker restart docs_pigo_1` or `NOTIFY` it to reload cache by executing on database
 
 ```sql
-NOTIFY pgo, 'reload schema';
+NOTIFY pigo, 'reload schema';
 ```
 
 4. Subscribe
@@ -68,20 +68,20 @@ NOTIFY pgo, 'reload schema';
 - MQTT: `/any/prefix/schemaName/tableName/operation` topic (testing with mosquitto client)
 
 ```sh
-mosquitto_sub -t pgo/public/users/c # operation: c=create, u=update, d=delete, r=read
+mosquitto_sub -t pigo/public/users/c # operation: c=create, u=update, d=delete, r=read
 ```
 
 - Kafka: topic convention is `[prefix].[schema_name].[table_name].[operation]`. use any kafka client eg [`kaf`](https://github.com/birdayz/kaf)
 
 ```sh
-kaf consume pgo.public.users.c --follow # consume messages until program execution
+kaf consume pigo.public.users.c --follow # consume messages until program execution
 ```
 
 - NATS:
 
 ```sh
-nats sub -s nats://localhost:4222 'pgo.public.users.>' # wildcard. includes all nested parts
-# nats sub -s nats://localhost:4222 'pgo.public.users.c' # specific
+nats sub -s nats://localhost:4222 'pigo.public.users.>' # wildcard. includes all nested parts
+# nats sub -s nats://localhost:4222 'pigo.public.users.c' # specific
 ```
 
 5. `INSERT` (or update etc) into users table

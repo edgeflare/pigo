@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	// "github.com/zitadel/oidc/v3/pkg/oidc"
 )
 

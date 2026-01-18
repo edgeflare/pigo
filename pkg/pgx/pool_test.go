@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgeflare/pgo/internal/testutil/pgtest"
+	"github.com/edgeflare/pigo/internal/testutil/pgtest"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

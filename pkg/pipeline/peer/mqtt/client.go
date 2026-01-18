@@ -8,7 +8,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/edgeflare/pgo/pkg/util/rand"
+	"github.com/edgeflare/pigo/pkg/util/rand"
 	"go.uber.org/zap"
 )
 
@@ -203,7 +203,7 @@ func setDefaultOptions(opts *mqtt.ClientOptions) {
 		opts.SetPassword(cmp.Or(os.Getenv("PGO_MQTT_PASSWORD"), ""))
 	}
 	if opts.ClientID == "" {
-		opts.SetClientID(fmt.Sprintf("pgo-logrepl-%s", rand.NewName()))
+		opts.SetClientID(fmt.Sprintf("pigo-logrepl-%s", rand.NewName()))
 	}
 }
 
@@ -225,7 +225,7 @@ func parseArgs(args []any) []any {
 
 	// Use default if empty
 	if topicPrefix == "" {
-		topicPrefix = "/pgo"
+		topicPrefix = "/pigo"
 	}
 
 	// Ensure the prefix starts with "/"

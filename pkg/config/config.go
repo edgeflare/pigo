@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/edgeflare/pgo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline"
 	"github.com/spf13/viper"
 )
 
@@ -61,7 +61,7 @@ func Load(cfgFile string) (*Config, error) {
 		fmt.Println("Using config file:", v.ConfigFileUsed())
 	} else {
 		// Look for default config locations
-		v.SetConfigName("pgo")
+		v.SetConfigName("pigo")
 		v.SetConfigType("yaml")
 		if home, err := os.UserHomeDir(); err == nil {
 			v.AddConfigPath(filepath.Join(home, ".config"))

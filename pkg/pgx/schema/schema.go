@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"sync"
 
-	pg "github.com/edgeflare/pgo/pkg/pgx"
+	pg "github.com/edgeflare/pigo/pkg/pgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -20,7 +20,7 @@ import (
 const (
 	// Following PostgREST's notification convention
 	// https://docs.postgrest.org/en/stable/references/schema_cache.html
-	reloadChannel = "pgo"
+	reloadChannel = "pigo"
 	reloadPayload = "reload schema"
 )
 

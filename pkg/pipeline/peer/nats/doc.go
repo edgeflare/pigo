@@ -6,7 +6,7 @@
 //   - Valid chars: alphanumeric, `-` or `_`
 //   - Max length: 255 bytes
 //
-// pgo uses `any.nested.prefix.schema_name.table_name.operation` topic to interact with PostgreSQL
+// pigo uses `any.nested.prefix.schema_name.table_name.operation` topic to interact with PostgreSQL
 //
 // Operations:
 //   - create (or c): Insert operations

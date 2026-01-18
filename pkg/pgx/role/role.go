@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	pg "github.com/edgeflare/pgo/pkg/pgx"
+	pg "github.com/edgeflare/pigo/pkg/pgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )

@@ -1,4 +1,4 @@
-package pgo
+package pigo
 
 import (
 	"context"
@@ -11,21 +11,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/metrics"
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/metrics"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	// Register built-in connectors
-	_ "github.com/edgeflare/pgo/pkg/pipeline/peer/clickhouse"
-	_ "github.com/edgeflare/pgo/pkg/pipeline/peer/debug"
-	_ "github.com/edgeflare/pgo/pkg/pipeline/peer/grpc"
-	_ "github.com/edgeflare/pgo/pkg/pipeline/peer/kafka"
-	"github.com/edgeflare/pgo/pkg/pipeline/peer/mqtt"
-	"github.com/edgeflare/pgo/pkg/pipeline/peer/nats"
+	_ "github.com/edgeflare/pigo/pkg/pipeline/peer/clickhouse"
+	_ "github.com/edgeflare/pigo/pkg/pipeline/peer/debug"
+	_ "github.com/edgeflare/pigo/pkg/pipeline/peer/grpc"
+	_ "github.com/edgeflare/pigo/pkg/pipeline/peer/kafka"
+	"github.com/edgeflare/pigo/pkg/pipeline/peer/mqtt"
+	"github.com/edgeflare/pigo/pkg/pipeline/peer/nats"
 
-	"github.com/edgeflare/pgo/pkg/pipeline/peer/pg"
+	"github.com/edgeflare/pigo/pkg/pipeline/peer/pg"
 )
 
 var (

@@ -3,13 +3,13 @@ package pglogrepl
 // import (
 // 	"log"
 
-// 	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+// 	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 // 	"github.com/jackc/pglogrepl"
 // 	"github.com/jackc/pgx/v5/pgtype"
 // )
 
 // // processV1 processes a logical replication message (wal2json) from PostgreSQL WAL data.
-// // Prefer pgoutput (which is default)
+// // Prefer pigoutput (which is default)
 // // TODO: improve if deemed useful
 // func processV1(walData []byte, relations map[uint32]*pglogrepl.RelationMessage, typeMap *pgtype.Map) ([]cdc.Event, error) {
 // 	logicalMsg, err := pglogrepl.Parse(walData)
@@ -71,7 +71,7 @@ package pglogrepl
 // 	case *pglogrepl.StreamAbortMessageV2:
 // 		log.Printf("Stream abort message: xid %d", logicalMsg.Xid)
 // 	default:
-// 		log.Printf("Unknown message type in pgoutput stream: %T", logicalMsg)
+// 		log.Printf("Unknown message type in pigoutput stream: %T", logicalMsg)
 // 	}
 // 	return []cdc.Event{}, nil
 // }

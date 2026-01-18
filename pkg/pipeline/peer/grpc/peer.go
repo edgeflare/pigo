@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
-	pb "github.com/edgeflare/pgo/proto/generated"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
+	pb "github.com/edgeflare/pigo/proto/generated"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -1,5 +1,5 @@
 # change the IP address 192.168.0.10 to your local IP address or hostname
-# in dex-config.yaml, pgo-config.yaml, and example-app container
+# in dex-config.yaml, pigo-config.yaml, and example-app container
 services:
   db-postgresql:
     image: docker.io/bitnami/postgresql:17.4.0
@@ -43,11 +43,11 @@ services:
         DO \$\$
         BEGIN
           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dex') THEN CREATE ROLE dex WITH LOGIN PASSWORD 'dexpw'; END IF;
-          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pgo') THEN CREATE ROLE pgo WITH LOGIN PASSWORD 'pgopw'; END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pigo') THEN CREATE ROLE pigo WITH LOGIN PASSWORD 'pigopw'; END IF;
           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authn') THEN CREATE ROLE authn NOLOGIN; END IF;
           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
           GRANT anon TO authn;
-          GRANT authn to pgo;
+          GRANT authn to pigo;
         END
         \$\$;
       "
@@ -90,13 +90,13 @@ services:
         retries: 3
         start_period: 15s
 
-  pgo-rest:
-    image: ghcr.io/edgeflare/pgo # or docker.io/postgrest
+  pigo-rest:
+    image: ghcr.io/edgeflare/pigo # or docker.io/postgrest
     command: [rest, --config, /rest/config.yaml]
     ports:
     - 8001:8001
     volumes:
-    - $PWD/pgo-config.yaml:/rest/config.yaml:rw,Z
+    - $PWD/pigo-config.yaml:/rest/config.yaml:rw,Z
     depends_on:
       db-postgresql:
         condition: service_healthy
@@ -106,11 +106,11 @@ services:
       #  condition: service_healthy
     restart: on-failure
 
-  pgo-pipeline: # sync-users-from-dex-to-main
-    image: ghcr.io/edgeflare/pgo
+  pigo-pipeline: # sync-users-from-dex-to-main
+    image: ghcr.io/edgeflare/pigo
     command: [pipeline, --config, /pipeline/config.yaml]
     volumes:
-    - $PWD/pgo-config.yaml:/pipeline/config.yaml:rw,Z
+    - $PWD/pigo-config.yaml:/pipeline/config.yaml:rw,Z
     depends_on:
       db-postgresql:
         condition: service_healthy
@@ -119,13 +119,13 @@ services:
       # iam-dex:
       #  condition: service_healthy
 
-  # # optional: for benchmarking / testing, pgo showed 38k TPS on my Mac while PostgrREST peakeds 1.2k TPS
+  # # optional: for benchmarking / testing, pigo showed 38k TPS on my Mac while PostgrREST peakeds 1.2k TPS
   # postgrest:
   #   image: docker.io/postgrest/postgrest:v12.2.3
   #   ports:
   #   - "3000:3000"
   #   environment:
-  #     PGRST_DB_URI: postgres://pgo:pgopw@db-postgresql:5432/main
+  #     PGRST_DB_URI: postgres://pigo:pigopw@db-postgresql:5432/main
   #     PGRST_OPENAPI_SERVER_PROXY_URI: http://0.0.0.0:3000
   #     PGRST_DB_ANON_ROLE: anon
   #     PGRST_LOG_LEVEL: debug

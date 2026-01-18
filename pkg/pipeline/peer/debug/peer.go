@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 // PeerDebug is a debug peer that logs the data to the console

@@ -1,7 +1,7 @@
 package main
 
-import "github.com/edgeflare/pgo/cmd/pgo"
+import "github.com/edgeflare/pigo/cmd/pigo"
 
 func main() {
-	pgo.Main()
+	pigo.Main()
 }

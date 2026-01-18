@@ -8,9 +8,9 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
-	"github.com/edgeflare/pgo/pkg/util"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/util"
 )
 
 type PeerClickHouse struct {

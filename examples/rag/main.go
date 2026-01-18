@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edgeflare/pgo/pkg/util"
-	"github.com/edgeflare/pgo/pkg/x/rag"
+	"github.com/edgeflare/pigo/pkg/util"
+	"github.com/edgeflare/pigo/pkg/x/rag"
 	"github.com/jackc/pgx/v5"
 )
 

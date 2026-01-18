@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/edgeflare/pgo/internal/testutil"
+	"github.com/edgeflare/pigo/internal/testutil"
 )
 
 func TestJq(t *testing.T) {

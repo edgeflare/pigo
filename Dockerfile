@@ -13,12 +13,12 @@ COPY ./pkg pkg
 COPY ./proto proto
 COPY ./main.go main.go
 
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o pgo .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o pigo .
 
 # runtime image
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/pgo .
+COPY --from=builder /workspace/pigo .
 USER 65532:65532
 
-ENTRYPOINT ["/pgo"]
+ENTRYPOINT ["/pigo"]

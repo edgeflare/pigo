@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 func TestNewManager(t *testing.T) {

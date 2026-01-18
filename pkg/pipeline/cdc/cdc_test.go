@@ -3,7 +3,7 @@ package cdc
 import (
 	"testing"
 
-	"github.com/edgeflare/pgo/internal/testutil"
+	"github.com/edgeflare/pigo/internal/testutil"
 )
 
 // TestDebeziumConformanceCDC tests the conformance of the CDC struct to the Debezium CDC format.

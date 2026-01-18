@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/edgeflare/pgo/pkg/pgx/schema"
+	"github.com/edgeflare/pigo/pkg/pgx/schema"
 	"github.com/jackc/pgx/v5"
 )
 

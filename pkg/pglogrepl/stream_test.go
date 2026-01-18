@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgeflare/pgo/internal/testutil/pgtest"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/internal/testutil/pgtest"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )

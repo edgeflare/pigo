@@ -29,8 +29,8 @@ release:
 
 kos:
 - repositories:
-  - ghcr.io/edgeflare/pgo
-  # - edgeflare/pgo
+  - ghcr.io/edgeflare/pigo
+  # - edgeflare/pigo
   tags:
   - "{{.Version}}"
   - latest

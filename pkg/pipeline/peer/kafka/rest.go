@@ -35,7 +35,7 @@ package kafka
 /*
 // HTTPServer exposes Kafka operations via HTTP API
 func HTTPServer() {
-	r := pgo.NewRouter()
+	r := pigo.NewRouter()
 
 	r.Use(mw.RequestID)
 	r.Use(mw.LoggerWithOptions(nil))
@@ -45,7 +45,7 @@ func HTTPServer() {
 	r.Handle("GET /topics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		topics, err := ListTopics(kafkaConfig)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 		}
 
 		var response []TopicResponse
@@ -56,7 +56,7 @@ func HTTPServer() {
 			})
 		}
 
-		pgo.JSON(w, http.StatusOK, response)
+		pigo.JSON(w, http.StatusOK, response)
 	}))
 
 	// API to create a topic
@@ -65,56 +65,56 @@ func HTTPServer() {
 			TopicName string             `json:"topic_name"`
 			Detail    sarama.TopicDetail `json:"detail"`
 		}
-		if err := pgo.BindOrError(r, w, &req); err != nil {
+		if err := pigo.BindOrError(r, w, &req); err != nil {
 			return
 		}
 		err := CreateTopic(kafkaConfig, req.TopicName, req.Detail)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 		}
 
-		pgo.JSON(w, http.StatusOK, "topic created")
+		pigo.JSON(w, http.StatusOK, "topic created")
 	}))
 
 	// API to produce a message
 	r.Handle("POST /produce", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req KafkaRequest
-		if err := pgo.BindOrError(r, w, &req); err != nil {
+		if err := pigo.BindOrError(r, w, &req); err != nil {
 			return
 		}
 		producer, err := CreateProducer(kafkaConfig)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		defer producer.Close()
 
 		err = ProduceMessage(producer, req.Topic, []byte(req.Message))
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		pgo.JSON(w, http.StatusOK, "Message produced")
+		pigo.JSON(w, http.StatusOK, "Message produced")
 	}))
 
 	// API to consume messages from a topic
 	r.Handle("GET /consume", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		topic := r.URL.Query().Get("topic")
 		if topic == "" {
-			pgo.Error(w, http.StatusBadRequest, "topic query parameter is required")
+			pigo.Error(w, http.StatusBadRequest, "topic query parameter is required")
 			return
 		}
 
 		consumer, err := CreateConsumer(kafkaConfig)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		defer consumer.Close()
 
 		partitionConsumer, err := consumer.ConsumePartition(topic, 0, sarama.OffsetOldest)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		defer partitionConsumer.Close()
@@ -129,13 +129,13 @@ func HTTPServer() {
 			}
 		}
 
-		pgo.JSON(w, http.StatusOK, messages)
+		pigo.JSON(w, http.StatusOK, messages)
 	}))
 
 	// API to create an ACL
 	r.Handle("POST /acls", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req ACLRequest
-		if err := pgo.BindOrError(r, w, &req); err != nil {
+		if err := pigo.BindOrError(r, w, &req); err != nil {
 			return
 		}
 
@@ -154,16 +154,16 @@ func HTTPServer() {
 
 		err := CreateACL(kafkaConfig, resource, acl)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		pgo.JSON(w, http.StatusOK, "ACL created")
+		pigo.JSON(w, http.StatusOK, "ACL created")
 	}))
 
 	// API to list ACLs
 	r.Handle("GET /acls", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req ACLFilterRequest
-		if err := pgo.BindOrError(r, w, &req); err != nil {
+		if err := pigo.BindOrError(r, w, &req); err != nil {
 			return
 		}
 
@@ -179,17 +179,17 @@ func HTTPServer() {
 
 		acls, err := ListAcls(kafkaConfig, filter)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		pgo.JSON(w, http.StatusOK, acls)
+		pigo.JSON(w, http.StatusOK, acls)
 	}))
 
 	// API to delete an ACL
 	r.Handle("DELETE /acls", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req ACLFilterRequest
-		if err := pgo.BindOrError(r, w, &req); err != nil {
+		if err := pigo.BindOrError(r, w, &req); err != nil {
 			return
 		}
 
@@ -205,11 +205,11 @@ func HTTPServer() {
 
 		matchingACLs, err := DeleteACL(kafkaConfig, filter)
 		if err != nil {
-			pgo.Error(w, http.StatusInternalServerError, err.Error())
+			pigo.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		pgo.JSON(w, http.StatusOK, matchingACLs)
+		pigo.JSON(w, http.StatusOK, matchingACLs)
 	}))
 
 	// Start server

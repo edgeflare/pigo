@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 )
 
 // GenerateRequest is the body for /generate requests. Model and Prompt fields are required.

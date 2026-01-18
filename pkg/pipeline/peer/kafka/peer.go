@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 // PeerKafka implements the source and sink for Kafka
@@ -29,7 +29,7 @@ func (p *PeerKafka) Connect(config json.RawMessage, args ...any) error {
 		cfg.Brokers = []string{"localhost:9092"}
 	}
 	if cfg.TopicPrefix == "" {
-		cfg.TopicPrefix = "pgo"
+		cfg.TopicPrefix = "pigo"
 	}
 	if cfg.Version == "" {
 		cfg.Version = "2.1.1"

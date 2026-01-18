@@ -19,9 +19,9 @@ const (
 
 	defaultStandbyUpdateInterval = 10 * time.Second
 	defaultBufferSize            = 1000
-	defaultPublication           = "pgo_pub"
-	defaultSlot                  = "pgo_slot"
-	defaultPlugin                = "pgoutput"
+	defaultPublication           = "pigo_pub"
+	defaultSlot                  = "pigo_slot"
+	defaultPlugin                = "pigoutput"
 )
 
 // Config holds replication configuration.

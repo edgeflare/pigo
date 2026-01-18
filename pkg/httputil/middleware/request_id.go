@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	"github.com/google/uuid"
 )
 

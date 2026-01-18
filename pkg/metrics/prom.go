@@ -16,7 +16,7 @@ import (
 var (
 	TransformationErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "pgo_transformation_errors_total",
+			Name: "pigo_transformation_errors_total",
 			Help: "Total number of transformation errors by type and pipeline",
 		},
 		[]string{"error_type", "pipeline", "source", "sink"},
@@ -24,7 +24,7 @@ var (
 
 	PublishErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "pgo_publish_errors_total",
+			Name: "pigo_publish_errors_total",
 			Help: "Total number of publish errors by sink",
 		},
 		[]string{"sink"},
@@ -32,7 +32,7 @@ var (
 
 	ProcessedEvents = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "pgo_processed_events_total",
+			Name: "pigo_processed_events_total",
 			Help: "Total number of processed events by pipeline",
 		},
 		[]string{"pipeline", "source", "sink"},
@@ -40,7 +40,7 @@ var (
 
 	EventProcessingDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "pgo_event_processing_duration_seconds",
+			Name:    "pigo_event_processing_duration_seconds",
 			Help:    "Duration of event processing",
 			Buckets: prometheus.DefBuckets,
 		},

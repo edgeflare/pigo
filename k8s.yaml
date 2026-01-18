@@ -2,16 +2,16 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/name: pgo
-  name: pgo
+    app.kubernetes.io/name: pigo
+  name: pigo
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: pgo
+      app.kubernetes.io/name: pigo
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: pgo
+        app.kubernetes.io/name: pigo
     spec:
       containers:
       - args:
@@ -21,9 +21,9 @@ spec:
         env:
         - name: PGO_POSTGRES_ANON_ROLE
           value: anon
-        image: ghcr.io/edgeflare/pgo
+        image: ghcr.io/edgeflare/pigo
         imagePullPolicy: Always
-        name: pgo-rest
+        name: pigo-rest
         ports:
         - containerPort: 8080
           protocol: TCP
@@ -31,21 +31,21 @@ spec:
         volumeMounts:
         - mountPath: /rest
           name: rest-config
-#      - image: ghcr.io/edgeflare/pgo
-#        name: pgo-pipeline
+#      - image: ghcr.io/edgeflare/pigo
+#        name: pigo-pipeline
 #        resources: {}
       volumes:
       - name: rest-config
         secret:
           defaultMode: 420
-          secretName: pgo-rest
+          secretName: pigo-rest
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/name: pgo
-  name: pgo
+    app.kubernetes.io/name: pigo
+  name: pigo
 spec:
   ports:
   - name: "8080"
@@ -53,7 +53,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app.kubernetes.io/name: pgo
+    app.kubernetes.io/name: pigo
   type: ClusterIP
 ---
 apiVersion: v1
@@ -62,7 +62,7 @@ stringData:
     rest:
       listenAddr: ":8080"
       pg:
-        connString: "host=localhost port=5432 user=pgo password=pgopw dbname=testdb"
+        connString: "host=localhost port=5432 user=pigo password=pigopw dbname=testdb"
       oidc:
         issuer: https://iam.example.org
         clientID: example-client-id
@@ -74,18 +74,18 @@ stringData:
       anonRole: anon
 kind: Secret
 metadata:
-  name: pgo-rest
+  name: pigo-rest
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   labels:
-    app.kubernetes.io/name: pgo
-  name: pgo
+    app.kubernetes.io/name: pigo
+  name: pigo
 spec:
   hostnames:
   - api.example.org
-  - pgo.example.org
+  - pigo.example.org
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: Gateway
@@ -111,7 +111,7 @@ spec:
   - backendRefs:
     - group: ""
       kind: Service
-      name: pgo
+      name: pigo
       port: 80
       weight: 1
     matches:

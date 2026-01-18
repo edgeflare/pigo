@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/edgeflare/pgo/pkg/rest"
+	"github.com/edgeflare/pigo/pkg/rest"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

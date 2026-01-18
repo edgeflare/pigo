@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/pglogrepl"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pglogrepl"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -37,9 +37,9 @@ func main() {
 	// configuration for logical replication. all options optional
 	// cfg := pglogrepl.DefaultConfig()
 	cfg := &pglogrepl.Config{
-		Publication: "pgo_pub",
-		Slot:        "pgo_slot",
-		Plugin:      "pgoutput",
+		Publication: "pigo_pub",
+		Slot:        "pigo_slot",
+		Plugin:      "pigoutput",
 		// tables to watch/replicate
 		Tables: []string{
 			// "table_name",                // (usually public) default_schema.table_name

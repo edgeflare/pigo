@@ -3,7 +3,7 @@ rest:
   pg:
     connString: "host=localhost port=5432 user=postgres password=secret dbname=testdb"
     # should use least privileged role, instead of postgres
-    # connString: "host=localhost port=5432 user=pgo password=pgopw dbname=testdb"
+    # connString: "host=localhost port=5432 user=pigo password=pigopw dbname=testdb"
   oidc:
     issuer: https://iam.example.org
     skipTLSVerify: true # for testing only
@@ -30,8 +30,8 @@ pipeline:
     config:
       servers: ["tcp://localhost:1883"]
       clientOptions: # github.com/eclipse/paho.mqtt.golang.ClientOptions
-        username: "pgo"
-        password: "pgopw"
+        username: "pigo"
+        password: "pigopw"
         tls:
           insecureSkipVerify: true
       topicPrefix: "o/+/+" # o/{org_id}/{mqtt_device_username}/{dbschema}/{dbtable}/{c=create,r=read,u=update,d=delete}
@@ -89,7 +89,7 @@ pipeline:
     connector: nats
     config:
       servers: ["nats://localhost:4222"]
-      # subjectPrefix: "pgo"
+      # subjectPrefix: "pigo"
       # username: "user"
       # password: "secret"
       # Optional TLS configuration

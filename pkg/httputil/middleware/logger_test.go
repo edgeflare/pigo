@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

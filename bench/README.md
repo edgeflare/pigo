@@ -5,7 +5,7 @@ We're comparing against the popular https://github.com/PostgREST/postgrest.
 0. Adjust the IP address of Dex to the LAN IP or equivalent in
 - docker-compose.yaml's example-app from which we obtain JWT token issued by the Dex IdP
 - dex-config.yaml
-- pgo-config.yaml
+- pigo-config.yaml
 
 1. Start all containers
 
@@ -51,7 +51,7 @@ PostgREST
 curl "localhost:3000/transactions?select=id,user_id" -H "authorization: Bearer $TOKEN"
 ```
 
-pgo rest
+pigo rest
 ```sh
 curl "localhost:8001/transactions?select=id,user_id" -H "authorization: Bearer $TOKEN"
 ```
@@ -61,7 +61,7 @@ Notice only the rows satisfiying `user_id == iam.user_jwt_sub()` are returned
 8. Benchmark with [k6](https://github.com/grafana/k6)
 
 
-pgo rest
+pigo rest
 
 ```sh
 export BASE_URL="http://localhost:8001/transactions?select=id,user_id"

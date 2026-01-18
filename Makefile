@@ -13,10 +13,10 @@ proto:
 	protoc -I=./proto --go_out=. --go-grpc_out=. ./proto/cdc.proto
 
 build:
-	CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o pgo .
+	CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o pigo .
 
 image:
-	$(CONTAINER_RUNTIME) build -t pgo .
+	$(CONTAINER_RUNTIME) build -t pigo .
 	$(COMPOSE_CMD) -f docker-compose.yaml build
 
 up:

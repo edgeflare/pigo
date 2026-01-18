@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
-	mw "github.com/edgeflare/pgo/pkg/httputil/middleware"
-	"github.com/edgeflare/pgo/pkg/pgx/schema"
+	"github.com/edgeflare/pigo/pkg/httputil"
+	mw "github.com/edgeflare/pigo/pkg/httputil/middleware"
+	"github.com/edgeflare/pigo/pkg/pgx/schema"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

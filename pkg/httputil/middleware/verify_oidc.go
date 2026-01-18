@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	"golang.org/x/oauth2"
 )
 

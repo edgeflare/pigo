@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/apache/age/drivers/golang/age"
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 )

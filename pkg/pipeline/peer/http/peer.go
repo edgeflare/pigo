@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"go.uber.org/zap"
 )
 

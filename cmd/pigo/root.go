@@ -1,10 +1,10 @@
-package pgo
+package pigo
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/edgeflare/pgo/pkg/config"
+	"github.com/edgeflare/pigo/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -13,9 +13,9 @@ var cfgFile string
 var logLevel string
 var cfg *config.Config
 var rootCmd = &cobra.Command{
-	Use:   "pgo",
+	Use:   "pigo",
 	Short: "PGO is a PostgreSQL CDC tool",
-	Long:  `pgo streams data among endpoints aka peers`,
+	Long:  `pigo streams data among endpoints aka peers`,
 	Run: func(cmd *cobra.Command, args []string) {
 		versionFlag, _ := cmd.Flags().GetBool("version")
 		if versionFlag {
@@ -37,7 +37,7 @@ func Main() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/pgo.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/pigo.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "info", "log requests at this level (debug, info, warn, error, fatal, none)")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Print the version number")
 

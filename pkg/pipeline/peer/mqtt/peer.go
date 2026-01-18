@@ -11,8 +11,8 @@ import (
 	"maps"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/edgeflare/pgo/pkg/pipeline"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +50,7 @@ func (p *PeerMQTT) Connect(config json.RawMessage, args ...any) error {
 		opts.Servers = append(opts.Servers, u)
 	}
 
-	p.Config.TopicPrefix = cmp.Or(cfg.TopicPrefix, "pgo")
+	p.Config.TopicPrefix = cmp.Or(cfg.TopicPrefix, "pigo")
 	p.Config.TopicToFields = cfg.TopicToFields
 	p.Config.TopicRewrites = cfg.TopicRewrites
 

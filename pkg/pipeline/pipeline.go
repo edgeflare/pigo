@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
-	"github.com/edgeflare/pgo/pkg/pipeline/transform"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline/transform"
 )
 
 // Sink is a pipeline output with its transformations.

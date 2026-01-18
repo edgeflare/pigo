@@ -1,8 +1,8 @@
 rest:
   listenAddr: ":8001"
   pg:
-    connString: "host=db-postgresql port=5432 user=pgo password=pgopw dbname=main sslmode=disable" # container
-    # connString: "host=localhost port=5432 user=pgo password=pgopw dbname=main sslmode=prefer"   # local
+    connString: "host=db-postgresql port=5432 user=pigo password=pigopw dbname=main sslmode=disable" # container
+    # connString: "host=localhost port=5432 user=pigo password=pigopw dbname=main sslmode=prefer"   # local
   oidc:
     issuer: http://192.168.0.10:5556/dex
     skipTLSVerify: true                             # for testing only

@@ -1,6 +1,6 @@
 # Contributing Guide
 
-Hello and welcome! We’re excited you want to contribute to pgo. Here’s how you can help:
+Hello and welcome! We’re excited you want to contribute to pigo. Here’s how you can help:
 
 ### Reporting Issues
 Found a bug or have a suggestion? Open an issue and provide as much detail as possible.
@@ -8,11 +8,11 @@ Found a bug or have a suggestion? Open an issue and provide as much detail as po
 ### Code Contributions
 1. **Fork the Repo:** Fork the repository to your GitHub account:
     ```bash
-    git clone git@github.com:<username>/pgo.git
+    git clone git@github.com:<username>/pigo.git
     ```
 2. **Clone Your Fork:** Clone it to your local machine:
     ```bash
-    git clone git@github.com:<username>/pgo.git
+    git clone git@github.com:<username>/pigo.git
     ```
 3. **Create a Branch:**
     ```bash
@@ -27,7 +27,7 @@ Found a bug or have a suggestion? Open an issue and provide as much detail as po
     ```bash
     git push origin feat/feature-name
     ```
-7. **Open a PR:** Create a pull request from your repository to the `dev` branch of `git@github.com:edgeflare/pgo.git`. Provide a clear description.
+7. **Open a PR:** Create a pull request from your repository to the `dev` branch of `git@github.com:edgeflare/pigo.git`. Provide a clear description.
 
 ### Code Style
 Follow our coding standards. If unsure, feel free to ask.

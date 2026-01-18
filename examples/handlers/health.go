@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 )
 
 // HealthHandler returns the request ID as a plain text response with a 200 OK status code.

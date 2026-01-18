@@ -1,4 +1,4 @@
-package pgo
+package pigo
 
 import (
 	"cmp"
@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	mw "github.com/edgeflare/pgo/pkg/httputil/middleware"
-	"github.com/edgeflare/pgo/pkg/rest"
+	mw "github.com/edgeflare/pigo/pkg/httputil/middleware"
+	"github.com/edgeflare/pigo/pkg/rest"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

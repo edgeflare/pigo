@@ -7,7 +7,7 @@
 // - Recommended max length: 249 bytes (to avoid potential issues)
 // - Forward slash (`/`) can be used for logical separation but requires proper escaping
 //
-// pgo uses `[prefix].[schema_name].[table_name].[operation]` topic pattern to interact with PostgreSQL
+// pigo uses `[prefix].[schema_name].[table_name].[operation]` topic pattern to interact with PostgreSQL
 //
 // Operations:
 // - create (or c): Insert operations

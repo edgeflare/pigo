@@ -3,8 +3,8 @@ package transform
 import (
 	"testing"
 
-	"github.com/edgeflare/pgo/internal/testutil"
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/internal/testutil"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 func TestExtract(t *testing.T) {

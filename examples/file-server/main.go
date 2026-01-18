@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	mw "github.com/edgeflare/pgo/pkg/httputil/middleware"
+	mw "github.com/edgeflare/pigo/pkg/httputil/middleware"
 )
 
 // Embed the static directory

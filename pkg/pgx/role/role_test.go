@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/edgeflare/pgo/internal/testutil/pgtest"
+	"github.com/edgeflare/pigo/internal/testutil/pgtest"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )

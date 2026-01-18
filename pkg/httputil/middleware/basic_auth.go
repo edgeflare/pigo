@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 )
 
 // BasicAuthConfig holds the username-password pairs for basic authentication.

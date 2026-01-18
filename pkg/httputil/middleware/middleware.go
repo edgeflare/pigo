@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 )
 
 // Add applies one or more middleware functions to a handler in the order they were provided.

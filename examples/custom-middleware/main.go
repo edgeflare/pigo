@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/edgeflare/pgo/pkg/httputil"
+	"github.com/edgeflare/pigo/pkg/httputil"
 )
 
 func main() {

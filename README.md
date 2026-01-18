@@ -1,4 +1,4 @@
-# pgo (`/pɪɡəʊ/`): Postgres integrations in Go
+# pigo: Postgres integrations in Go
 
 > **usability status: experimental**
 
@@ -11,16 +11,16 @@ This project follows a **Work → Right → Fast** approach:
 It's in the early stage, so the code may be rough/incomplete. Join us in building and improving it!
 
 ```sh
-go install github.com/edgeflare/pgo@main # or make build or download from release page
+go install github.com/edgeflare/pigo@main # or make build or download from release page
 ```
 
 ## [PostgREST](https://docs.postgrest.org/en/stable/references/api/tables_views.html) compatible REST API
 
 ```sh
-pgo rest --config pkg/config/example.config.yaml
+pigo rest --config pkg/config/example.config.yaml
 ```
 
-See [godoc](https://pkg.go.dev/github.com/edgeflare/pgo/pkg/rest) and `pgo rest --help` for more.
+See [godoc](https://pkg.go.dev/github.com/edgeflare/pigo/pkg/rest) and `pigo rest --help` for more.
 
 [Benchmark results](./bench) compared to PostgREST
 
@@ -38,10 +38,10 @@ See [godoc](https://pkg.go.dev/github.com/edgeflare/pgo/pkg/rest) and `pgo rest 
 
 [![asciicast](https://asciinema.org/a/704523.svg)](https://asciinema.org/a/704523)
 
-1. Start Postgres, NATS, Kafka, MQTT broker and pgo pipeline as containers
+1. Start Postgres, NATS, Kafka, MQTT broker and pigo pipeline as containers
 
 ```sh
-git clone git@github.com:edgeflare/pgo.git
+git clone git@github.com:edgeflare/pigo.git
 
 make image
 
@@ -86,11 +86,11 @@ CREATE TABLE IF NOT EXISTS  another_schema.transformed_users (
 );
 ```
 
-pgo caches the table schemas for simpler parsing of CDC events (rows). To update pgo cache with newly created tables,
-either `docker restart pgo_pgo_1` or `NOTIFY` it to reload cache by executing on database
+pigo caches the table schemas for simpler parsing of CDC events (rows). To update pigo cache with newly created tables,
+either `docker restart pigo_pigo_1` or `NOTIFY` it to reload cache by executing on database
 
 ```sql
-NOTIFY pgo, 'reload schema';
+NOTIFY pigo, 'reload schema';
 ```
 
 4. Subscribe
@@ -98,20 +98,20 @@ NOTIFY pgo, 'reload schema';
 - MQTT: `/any/prefix/schemaName/tableName/operation` topic (testing with mosquitto client)
 
 ```sh
-mosquitto_sub -t pgo/public/users/c # operation: c=create, u=update, d=delete, r=read
+mosquitto_sub -t pigo/public/users/c # operation: c=create, u=update, d=delete, r=read
 ```
 
 - Kafka: topic convention is `[prefix].[schema_name].[table_name].[operation]`. use any kafka client eg [`kaf`](https://github.com/birdayz/kaf)
 
 ```sh
-kaf consume pgo.public.users.c --follow # consume messages until program execution
+kaf consume pigo.public.users.c --follow # consume messages until program execution
 ```
 
 - NATS:
 
 ```sh
-nats sub -s nats://localhost:4222 'pgo.public.users.>' # wildcard. includes all nested parts
-# nats sub -s nats://localhost:4222 'pgo.public.users.c' # specific
+nats sub -s nats://localhost:4222 'pigo.public.users.>' # wildcard. includes all nested parts
+# nats sub -s nats://localhost:4222 'pigo.public.users.c' # specific
 ```
 
 5. `INSERT` (or update etc) into users table

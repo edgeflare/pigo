@@ -12,7 +12,7 @@ import (
 
 	"slices"
 
-	"github.com/edgeflare/pgo/pkg/util"
+	"github.com/edgeflare/pigo/pkg/util"
 )
 
 // Middleware defines a function type that represents a middleware. Middleware functions wrap an
@@ -129,7 +129,7 @@ func (r *Router) Handle(methodPattern string, handler http.Handler) {
 
 // ListenAndServe starts the server, automatically choosing between HTTP and HTTPS based on TLS config.
 func (r *Router) ListenAndServe(addr string) error {
-	fmt.Print(colorGreen + pgoASCIIArt + colorReset)
+	fmt.Print(colorGreen + pigoASCIIArt + colorReset)
 	fmt.Printf("starting server on %s\n", addr)
 
 	r.server.Addr = addr
@@ -166,7 +166,7 @@ const (
 	colorRed    = "\033[31m"
 	colorGreen  = "\033[32m"
 	colorReset  = "\033[0m"
-	pgoASCIIArt = `
+	pigoASCIIArt = `
  _ __   __ _  ___
 | '_ \ / _' |/ _ \
 | |_) | (_| | (_) |

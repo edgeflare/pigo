@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edgeflare/pgo/internal/testutil/pgtest"
+	"github.com/edgeflare/pigo/internal/testutil/pgtest"
 	"github.com/stretchr/testify/require"
 )
 

@@ -10,7 +10,7 @@ peers:
   connector: nats
   config:
     servers: ["nats://localhost:4222"]
-    subjectPrefix: "pgo"
+    subjectPrefix: "pigo"
 
 - name: debug # logs CDC events to stdout
   connector: debug

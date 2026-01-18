@@ -3,7 +3,7 @@ package transform
 import (
 	"fmt"
 
-	"github.com/edgeflare/pgo/pkg/pipeline/cdc"
+	"github.com/edgeflare/pigo/pkg/pipeline/cdc"
 )
 
 // ExtractConfig holds the configuration for the extract transformation
