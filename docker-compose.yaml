@@ -1,8 +1,7 @@
-# change the IP address 192.168.0.10 to your local IP address or hostname
-# in dex-config.yaml, pigo-config.yaml, and example-app container
+# change the IP address 192.168.1.2 to your local IP address or hostname in conf/dex.yaml, conf/pigo.yaml
 services:
   db-postgresql:
-    image: docker.io/bitnami/postgresql:17.4.0
+    image: docker.io/bitnami/postgresql:latest
     environment:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_USER: postgres
@@ -20,7 +19,7 @@ services:
       retries: 5
 
   init-db-postgresql:
-    image: docker.io/bitnami/postgresql:17.4.0
+    image: docker.io/bitnami/postgresql:latest
     environment:
       PGHOST: db-postgresql
       PGUSER: postgres
@@ -34,7 +33,7 @@ services:
     - -c
     - |
       echo "Waiting for PostgreSQL to be ready..."
-      until PGPASSWORD=postgrespw psql -h db-postgresql -U postgres -c '\q'; do
+      until psql -U postgres -c '\q'; do
         echo "PostgreSQL is unavailable - sleeping"
         sleep 2
       done
@@ -51,110 +50,35 @@ services:
         END
         \$\$;
       "
-      psql -c "CREATE DATABASE dex;" || true
-      psql -c "ALTER DATABASE dex OWNER TO dex;"
-      
-      # Create completion flag file
-      touch /tmp/init-complete
-      
-      # Keep the container running
-      echo "Init complete, keeping container alive for dependencies"
-      tail -f /dev/null
-    restart: on-failure
-    healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/init-complete"]
-      interval: 2s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
-  iam-dex:
-    image: ghcr.io/edgeflare/dex:latest
-    restart: always
+      psql -c "CREATE DATABASE dex;" || true
+      psql -c "ALTER DATABASE dex OWNER TO dex;"      
+    restart: on-failure
+  
+  iam-dex: # Identity and Access Management (AuthN/AuthZ)
+    image: docker.io/edgeflare/dex
     command: 'dex serve /config.yaml'
     environment:
-      DEX_CUSTOM_CLAIMS_STATIC: '{"policy": {"pgrole": "authn"}}'
+      DEX_CUSTOM_CLAIMS_STATIC: '{"policy": {"pgrole": "authn"}, "exampleclaim": "value"}'
     ports:
     - 5556:5556
     volumes:
-    - $PWD/dex-config.yaml:/config.yaml:rw,Z
+    - $PWD/conf/dex.yaml:/config.yaml:rw,Z
     depends_on:
       db-postgresql:
         condition: service_healthy
-      init-db-postgresql:
-        condition: service_healthy
-    healthcheck: # doesn't work. curl/wget not installed in dex image
-        test: ["CMD-SHELL", "wget -q --spider http://localhost:5556/healthz/live || curl -f http://localhost:5556/healthz/live || exit 1"]
-        interval: 10s
-        timeout: 5s
-        retries: 3
-        start_period: 15s
+    restart: on-failure
 
-  pigo-rest:
-    image: ghcr.io/edgeflare/pigo # or docker.io/postgrest
+  rest-pigo: # PostgreSQL over REST API
+    image: ghcr.io/edgeflare/pigo
     command: [rest, --config, /rest/config.yaml]
     ports:
     - 8001:8001
     volumes:
-    - $PWD/pigo-config.yaml:/rest/config.yaml:rw,Z
+    - $PWD/conf/pigo.yaml:/rest/config.yaml:rw,Z
     depends_on:
       db-postgresql:
         condition: service_healthy
-      init-db-postgresql:
-        condition: service_healthy
-      # iam-dex:
-      #  condition: service_healthy
-    restart: on-failure
-
-  pigo-pipeline: # sync-users-from-dex-to-main
-    image: ghcr.io/edgeflare/pigo
-    command: [pipeline, --config, /pipeline/config.yaml]
-    volumes:
-    - $PWD/pigo-config.yaml:/pipeline/config.yaml:rw,Z
-    depends_on:
-      db-postgresql:
-        condition: service_healthy
-      init-db-postgresql:
-        condition: service_healthy
-      # iam-dex:
-      #  condition: service_healthy
-
-  # # optional: for benchmarking / testing, pigo showed 38k TPS on my Mac while PostgrREST peakeds 1.2k TPS
-  # postgrest:
-  #   image: docker.io/postgrest/postgrest:v12.2.3
-  #   ports:
-  #   - "3000:3000"
-  #   environment:
-  #     PGRST_DB_URI: postgres://pigo:pigopw@db-postgresql:5432/main
-  #     PGRST_OPENAPI_SERVER_PROXY_URI: http://0.0.0.0:3000
-  #     PGRST_DB_ANON_ROLE: anon
-  #     PGRST_LOG_LEVEL: debug
-  #     PGRST_DB_SCHEMA: public,iam
-  #     PGRST_JWT_ROLE_CLAIM_KEY: ".policy.pgrole"
-  #     PGRST_JWT_SECRET: "@/etc/dex-jwks.json"
-  #   depends_on:
-  #     postgres-source:
-  #       condition: service_healthy
-  #   volumes:
-  #   - $PWD/dex-jwks.json:/etc/dex-jwks.json:rw,Z
-
-  example-app: # for obtaining an OAuth2 token from Dex
-    image: docker.io/golang:1.24-alpine
-    ports:
-    - 5555:5555
-    entrypoint:
-    - /bin/sh
-    - -c
-    - |
-      go install github.com/dexidp/dex/examples/example-app@latest
-      example-app --issuer http://192.168.0.10:5556/dex --client-id oauth2-proxy --listen http://0.0.0.0:5555
-    depends_on:
-      db-postgresql:
-        condition: service_healthy
-      init-db-postgresql:
-        condition: service_healthy
-      # iam-dex:
-      #  condition: service_healthy
     restart: on-failure
 
 volumes:

@@ -1,4 +1,4 @@
-# PGO benchmarks
+# PIGO benchmarks
 
 We're comparing against the popular https://github.com/PostgREST/postgrest.
 
@@ -36,7 +36,7 @@ docker compose up -d
 
 5. Visit the example-app at [http://localhost:5555](http://localhost:5555). It should present 2 login options,
 each with 1 test user. *Login with Example* doesn't require username/password; use `admin@example.com:password` with email login.
-This triggers insertion of 2 rows in public.refresh_token in the `dex` database. PGO pipelines syncs the users in `iam.users` table
+This triggers insertion of 2 rows in public.refresh_token in the `dex` database. PIGO pipelines syncs the users in `iam.users` table
 in the `main` (your appliaction database). We now can reference `iam.users(sub)` from in table eg in `public.transactions`.
 
 6. Insert the [003_mocks.sql](./003_mocks.sql) data into the `transactions` table using psql

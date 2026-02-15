@@ -49,18 +49,18 @@ func runRESTServer(cmd *cobra.Command, args []string) {
 	// Override with environment variables for specific cases
 	connString := cfg.REST.PG.ConnString
 	if connString == "" {
-		connString = os.Getenv("PGO_REST_PG_CONN_STRING")
+		connString = os.Getenv("PIGO_REST_PG_CONN_STRING")
 		if connString == "" {
 			log.Fatal("PostgreSQL connection string required")
 		}
 	}
 
 	oidcConfig := &mw.OIDCProviderConfig{
-		ClientID:     cmp.Or(os.Getenv("PGO_OIDC_CLIENT_ID"), cfg.REST.OIDC.ClientID),
-		ClientSecret: cmp.Or(os.Getenv("PGO_OIDC_CLIENT_SECRET"), cfg.REST.OIDC.ClientSecret),
-		Issuer:       cmp.Or(os.Getenv("PGO_OIDC_ISSUER"), cfg.REST.OIDC.Issuer),
+		ClientID:     cmp.Or(os.Getenv("PIGO_OIDC_CLIENT_ID"), cfg.REST.OIDC.ClientID),
+		ClientSecret: cmp.Or(os.Getenv("PIGO_OIDC_CLIENT_SECRET"), cfg.REST.OIDC.ClientSecret),
+		Issuer:       cmp.Or(os.Getenv("PIGO_OIDC_ISSUER"), cfg.REST.OIDC.Issuer),
 		SkipTLSVerify: func() bool {
-			if os.Getenv("PGO_OIDC_SKIP_TLS_VERIFY") != "" {
+			if os.Getenv("PIGO_OIDC_SKIP_TLS_VERIFY") != "" {
 				return true
 			}
 			return cfg.REST.OIDC.SkipTLSVerify
@@ -68,7 +68,7 @@ func runRESTServer(cmd *cobra.Command, args []string) {
 	}
 
 	roleClaimKey := cmp.Or(
-		os.Getenv("PGO_POSTGRES_OIDC_ROLE_CLAIM_KEY"),
+		os.Getenv("PIGO_POSTGRES_OIDC_ROLE_CLAIM_KEY"),
 		cfg.REST.OIDC.RoleClaimKey,
 	)
 

@@ -1,0 +1,54 @@
+issuer: http://192.168.1.2:5556/dex
+storage:
+  type: postgres
+  config:
+    host: db-postgresql
+    port: 5432
+    database: dex
+    user: dex
+    password: dexpw
+    ssl:
+      mode: disable
+web:
+  http: 0.0.0.0:5556
+  allowedOrigins: ['*']
+staticClients:
+- id: public-webui
+  redirectURIs:
+  - http://127.0.0.1:4200/signin/callback
+  - http://localhost:4200/signin/callback
+  - http://127.0.0.1:4200/signout/callback
+  - http://localhost:4200/signout/callback
+  - org.example.capdemo://signin/callback
+  - org.example.capdemo://signout/callback
+  name: public-webui
+  public: true
+- id: oauth2-proxy # backend/api client
+  redirectURIs:
+  - http://127.0.0.1:4180/oauth2/callback
+  - https://oauth2-proxy.example.org/oauth2/callback
+  name: oauth2-proxy
+  secret: example-secret
+  trustedPeers:
+  - public-webui
+connectors:
+- type: mockCallback
+  id: mock
+  name: Example
+# - type: github
+#   id: github
+#   name: GitHub
+#   config:
+#     clientID: <clientID>
+#     clientSecret: <clientSecret>
+#     redirectURI: https://iam.example.org/callback
+enablePasswordDB: true
+staticPasswords:
+- email: "admin@example.com"
+  # bcrypt hash of the string "password": $(echo password | htpasswd -BinC 10 admin | cut -d: -f2)
+  hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+  username: "admin"
+  userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+oauth2:
+  skipApprovalScreen: true
+  alwaysShowLoginScreen: false

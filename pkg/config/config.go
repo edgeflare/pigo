@@ -78,7 +78,7 @@ func Load(cfgFile string) (*Config, error) {
 
 	// Override with environment variables
 	v.AutomaticEnv()
-	v.SetEnvPrefix("PGO")
+	v.SetEnvPrefix("PIGO")
 
 	// CLI flags can override via viper.BindPFlag() elsewhere
 

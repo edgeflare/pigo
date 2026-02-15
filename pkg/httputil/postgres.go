@@ -69,7 +69,7 @@ func Conn(r *http.Request) (map[string]any, *pgxpool.Conn, *pgconn.PgError) {
 // for use with Row Level Security (RLS) enabled tables.
 //
 // The function also sets JWT claims in the PostgreSQL session using the environment
-// variable PGO_POSTGRES_OIDC_REQUEST_JWT_CLAIMS (defaults to "request.jwt.claims"
+// variable PIGO_POSTGRES_OIDC_REQUEST_JWT_CLAIMS (defaults to "request.jwt.claims"
 // for PostgREST compatibility).
 //
 // Example RLS policy that allows users to only select their own rows:
@@ -98,7 +98,7 @@ func ConnWithRole(r *http.Request) (map[string]any, *pgxpool.Conn, *pgconn.PgErr
 		// Fallback for basic auth: use username as role
 		if basicUser, ok := r.Context().Value(BasicAuthCtxKey).(string); ok && basicUser != "" {
 			role = basicUser
-		} else if anonRole := os.Getenv("PGO_POSTGRES_ANON_ROLE"); anonRole != "" {
+		} else if anonRole := os.Getenv("PIGO_POSTGRES_ANON_ROLE"); anonRole != "" {
 			// Fallback for anon: use configured anon role
 			role = anonRole
 		} else {
@@ -119,7 +119,7 @@ func ConnWithRole(r *http.Request) (map[string]any, *pgxpool.Conn, *pgconn.PgErr
 
 	escapedClaimsJSON := strings.ReplaceAll(string(claimsJSON), "'", "''")
 	setRoleQuery := fmt.Sprintf("SET ROLE %s;", role)
-	reqClaims, ok := os.LookupEnv("PGO_POSTGRES_OIDC_REQUEST_JWT_CLAIMS")
+	reqClaims, ok := os.LookupEnv("PIGO_POSTGRES_OIDC_REQUEST_JWT_CLAIMS")
 	if !ok {
 		reqClaims = "request.jwt.claims"
 	}

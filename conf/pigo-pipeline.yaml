@@ -4,7 +4,7 @@ rest:
     connString: "host=db-postgresql port=5432 user=pigo password=pigopw dbname=main sslmode=disable" # container
     # connString: "host=localhost port=5432 user=pigo password=pigopw dbname=main sslmode=prefer"   # local
   oidc:
-    issuer: http://192.168.0.10:5556/dex
+    issuer: http://192.168.1.2:5556/dex
     skipTLSVerify: true                             # for testing only
     clientID: oauth2-proxy
     clientSecret: ZXhhbXBsZS1hcHAtc2VjcmV0 

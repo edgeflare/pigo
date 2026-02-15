@@ -19,7 +19,7 @@ spec:
         - --config
         - /rest/config.yaml
         env:
-        - name: PGO_POSTGRES_ANON_ROLE
+        - name: PIGO_POSTGRES_ANON_ROLE
           value: anon
         image: ghcr.io/edgeflare/pigo
         imagePullPolicy: Always

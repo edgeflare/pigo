@@ -27,7 +27,7 @@ func main() {
 		cancel()
 	}()
 
-	conn, err := pgconn.Connect(context.Background(), cmp.Or(os.Getenv("PGO_PGLOGREPL_CONN_STRING"),
+	conn, err := pgconn.Connect(context.Background(), cmp.Or(os.Getenv("PIGO_PGLOGREPL_CONN_STRING"),
 		"postgres://postgres:secret@localhost:5432/testdb?replication=database"))
 	if err != nil {
 		log.Fatal("connect failed:", err)
@@ -39,7 +39,7 @@ func main() {
 	cfg := &pglogrepl.Config{
 		Publication: "pigo_pub",
 		Slot:        "pigo_slot",
-		Plugin:      "pigoutput",
+		Plugin:      "pgoutput",
 		// tables to watch/replicate
 		Tables: []string{
 			// "table_name",                // (usually public) default_schema.table_name

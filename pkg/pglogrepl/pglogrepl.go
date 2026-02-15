@@ -21,7 +21,7 @@ const (
 	defaultBufferSize            = 1000
 	defaultPublication           = "pigo_pub"
 	defaultSlot                  = "pigo_slot"
-	defaultPlugin                = "pigoutput"
+	defaultPlugin                = "pgoutput"
 )
 
 // Config holds replication configuration.

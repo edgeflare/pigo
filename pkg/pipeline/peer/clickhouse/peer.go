@@ -29,16 +29,16 @@ func (p *PeerClickHouse) Connect(config json.RawMessage, args ...any) error {
 
 	// Set values from environment variables or use defaults
 	if len(p.config.Addr) == 0 {
-		p.config.Addr = []string{util.GetEnvOrDefault("PGO_CLICKHOUSE_ADDR", "localhost:9000")}
+		p.config.Addr = []string{util.GetEnvOrDefault("PIGO_CLICKHOUSE_ADDR", "localhost:9000")}
 	}
 	if p.config.Auth.Database == "" {
-		p.config.Auth.Database = util.GetEnvOrDefault("PGO_CLICKHOUSE_AUTH_DATABASE", "default")
+		p.config.Auth.Database = util.GetEnvOrDefault("PIGO_CLICKHOUSE_AUTH_DATABASE", "default")
 	}
 	if p.config.Auth.Username == "" {
-		p.config.Auth.Username = util.GetEnvOrDefault("PGO_CLICKHOUSE_AUTH_USERNAME", "default")
+		p.config.Auth.Username = util.GetEnvOrDefault("PIGO_CLICKHOUSE_AUTH_USERNAME", "default")
 	}
 	if p.config.Auth.Password == "" {
-		p.config.Auth.Password = util.GetEnvOrDefault("PGO_CLICKHOUSE_AUTH_PASSWORD", "")
+		p.config.Auth.Password = util.GetEnvOrDefault("PIGO_CLICKHOUSE_AUTH_PASSWORD", "")
 	}
 
 	// Create a new ClickHouse connection

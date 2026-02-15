@@ -24,7 +24,7 @@ See [godoc](https://pkg.go.dev/github.com/edgeflare/pigo/pkg/rest) and `pigo res
 
 [Benchmark results](./bench) compared to PostgREST
 
-| Metric | PGO REST | PostgREST |
+| Metric | PIGO REST | PostgREST |
 |--------|---------------|-----------|
 | VUs | 10,000 | 1,000 |
 | Requests/sec | 38,392 | 828 |

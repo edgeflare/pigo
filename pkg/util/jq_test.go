@@ -277,7 +277,7 @@ func BenchmarkJq(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			b.ResetTimer() // Reset timer before each benchmark
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, err := Jq(input, bm.path)
 				if err != nil {
 					b.Fatalf("Unexpected error: %v", err)

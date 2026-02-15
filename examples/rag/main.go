@@ -15,7 +15,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	conn, err := pgx.Connect(ctx, util.GetEnvOrDefault("PGO_POSTGRES_CONN_STRING", "postgres://postgres:secret@localhost:5432/postgres"))
+	conn, err := pgx.Connect(ctx, util.GetEnvOrDefault("PIGO_POSTGRES_CONN_STRING", "postgres://postgres:secret@localhost:5432/postgres"))
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

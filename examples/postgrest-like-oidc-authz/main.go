@@ -31,14 +31,14 @@ func main() {
 
 	// OIDC middleware for authentication
 	oidcConfig := mw.OIDCProviderConfig{
-		ClientID:     os.Getenv("PGO_OIDC_CLIENT_ID"),
-		ClientSecret: os.Getenv("PGO_OIDC_CLIENT_SECRET"),
-		Issuer:       os.Getenv("PGO_OIDC_ISSUER"),
+		ClientID:     os.Getenv("PIGO_OIDC_CLIENT_ID"),
+		ClientSecret: os.Getenv("PIGO_OIDC_CLIENT_SECRET"),
+		Issuer:       os.Getenv("PIGO_OIDC_ISSUER"),
 	}
 	apiv1.Use(mw.VerifyOIDCToken(oidcConfig))
 
 	pgxPoolMgr := pgx.NewPoolManager()
-	err := pgxPoolMgr.Add(context.Background(), pgx.Pool{Name: "default", ConnString: os.Getenv("PGO_POSTGRES_CONN_STRING")}, true)
+	err := pgxPoolMgr.Add(context.Background(), pgx.Pool{Name: "default", ConnString: os.Getenv("PIGO_POSTGRES_CONN_STRING")}, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func main() {
 	// Use Postgres middleware to attach a pgxpool.Conn to the request context for authorized users
 	pgmw := mw.Postgres(pgxPool, mw.WithOIDCAuthz(
 		oidcConfig,
-		cmp.Or(os.Getenv("PGO_POSTGRES_OIDC_ROLE_CLAIM_KEY"), ".policy.pgrole")),
+		cmp.Or(os.Getenv("PIGO_POSTGRES_OIDC_ROLE_CLAIM_KEY"), ".policy.pgrole")),
 	)
 	apiv1.Use(pgmw)
 

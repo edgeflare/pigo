@@ -36,8 +36,8 @@ var (
 var pipelineCmd = &cobra.Command{
 	Use:     "pipeline",
 	Aliases: []string{"p"},
-	Short:   "Run the PGO pipeline",
-	Long:    `Run the PGO pipeline to replicate data changes from PostgreSQL to various destinations.`,
+	Short:   "Run the PIGO pipeline",
+	Long:    `Run the PIGO pipeline to replicate data changes from PostgreSQL to various destinations.`,
 	RunE:    runPipeline,
 }
 

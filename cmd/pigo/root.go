@@ -14,7 +14,7 @@ var logLevel string
 var cfg *config.Config
 var rootCmd = &cobra.Command{
 	Use:   "pigo",
-	Short: "PGO is a PostgreSQL CDC tool",
+	Short: "PIGO is a PostgreSQL CDC tool",
 	Long:  `pigo streams data among endpoints aka peers`,
 	Run: func(cmd *cobra.Command, args []string) {
 		versionFlag, _ := cmd.Flags().GetBool("version")

@@ -176,7 +176,7 @@ volumes:
 # docker.io/edgeflare/postgresql:16-wal-g       # WAL archiving, Point-in-time restore
 # docker.io/edgeflare/postgresql:16-pgvector    # Vector extension
 # docker.io/edgeflare/postgresql:16-apache-age  # Graph extension
-# docker.io/edgeflare/postgresql:16-wal2json    # WAL as JSON (prefer pigoutput instead)
+# docker.io/edgeflare/postgresql:16-wal2json    # WAL as JSON (prefer pgoutput instead)
 # docker.io/timescale/timescaledb-ha:pg16       # Timeseries extension. includes pgvector, pgvectorscale
 # docker.io/bitnami/postgresql:16               # includes PostGIS
 # docker.io/postgres:16

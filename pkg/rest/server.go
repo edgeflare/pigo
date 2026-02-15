@@ -45,6 +45,7 @@ func NewServer(connString, baseURL string, omitempty ...bool) (*Server, error) {
 	}
 
 	server.registerHandlers()
+	server.registerRPCHandlers()
 	server.addOpenAPIEndpoint()
 
 	return server, nil
@@ -86,8 +87,8 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, s.baseURL)
 	if path == "" || path == "/" {
 		html := fmt.Sprintf(`<!DOCTYPE html>
-	<title>PGO</title>
-	<h1>PGO REST API</h1>
+	<title>PIGO</title>
+	<h1>PIGO REST API</h1>
 	<h3>Auto-generated REST API for PostgreSQL</h3>
 	<p><a href="%s/openapi.json">OpenAPI Specification</a></p>`, s.baseURL)
 
@@ -317,7 +318,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) addOpenAPIEndpoint() {
 	info := schema.OpenAPIInfo{
-		Title:       "PGO REST API",
+		Title:       "PIGO REST API",
 		Description: "Auto-generated REST API for PostgreSQL",
 		Version:     "1.0.0",
 	}

@@ -192,15 +192,15 @@ func convertToPahoOptions(opts *ClientOptions) (*mqtt.ClientOptions, error) {
 
 func setDefaultOptions(opts *mqtt.ClientOptions) {
 	if len(opts.Servers) == 0 {
-		defaultBroker := cmp.Or(os.Getenv("PGO_MQTT_BROKER"), "tcp://127.0.0.1:1883")
+		defaultBroker := cmp.Or(os.Getenv("PIGO_MQTT_BROKER"), "tcp://127.0.0.1:1883")
 		opts.AddBroker(defaultBroker)
 	}
 
 	if opts.Username == "" {
-		opts.SetUsername(cmp.Or(os.Getenv("PGO_MQTT_USERNAME"), ""))
+		opts.SetUsername(cmp.Or(os.Getenv("PIGO_MQTT_USERNAME"), ""))
 	}
 	if opts.Password == "" {
-		opts.SetPassword(cmp.Or(os.Getenv("PGO_MQTT_PASSWORD"), ""))
+		opts.SetPassword(cmp.Or(os.Getenv("PIGO_MQTT_PASSWORD"), ""))
 	}
 	if opts.ClientID == "" {
 		opts.SetClientID(fmt.Sprintf("pigo-logrepl-%s", rand.NewName()))
