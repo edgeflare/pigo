@@ -18,7 +18,7 @@ type Config struct {
 type RESTConfig struct {
 	PG         PGConfig          `mapstructure:"pg"`
 	ListenAddr string            `mapstructure:"listenAddr"`
-	BaseURL    string            `mapstructure:"baseURL"`
+	BasePath   string            `mapstructure:"basePath"`
 	OIDC       OIDCConfig        `mapstructure:"oidc"`
 	BasicAuth  map[string]string `mapstructure:"basicAuth"`
 	AnonRole   string            `mapstructure:"anonRole"`

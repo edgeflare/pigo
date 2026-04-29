@@ -163,15 +163,16 @@ func (r *Router) applyMiddleware() http.Handler {
 
 // Constants for ASCII art and console colors
 const (
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorReset  = "\033[0m"
+	colorRed     = "\033[31m"
+	colorGreen   = "\033[32m"
+	colorReset   = "\033[0m"
 	pigoASCIIArt = `
- _ __   __ _  ___
-| '_ \ / _' |/ _ \
-| |_) | (_| | (_) |
-| .__/ \__, |\___/
-|_|    |___/
+
+ _ __ (_)  _ _  __
+| '_ \| |/ _' |/ _ \
+| |_) | | (_| | (_) |
+| .__/|_|\__, |\___/
+|_|      |___/
 
 `
 )

@@ -28,17 +28,17 @@ type SecurityConfig struct {
 // OpenAPIGenerator generates OpenAPI specs from the schema cache
 type OpenAPIGenerator struct {
 	cache    *Cache
-	baseURL  string
+	basePath string
 	info     OpenAPIInfo
 	security SecurityConfig
 }
 
 // NewOpenAPIGenerator creates a new OpenAPI generator
-func NewOpenAPIGenerator(cache *Cache, baseURL string, info OpenAPIInfo) *OpenAPIGenerator {
+func NewOpenAPIGenerator(cache *Cache, basePath string, info OpenAPIInfo) *OpenAPIGenerator {
 	return &OpenAPIGenerator{
-		cache:   cache,
-		baseURL: strings.TrimSuffix(baseURL, "/"),
-		info:    info,
+		cache:    cache,
+		basePath: strings.TrimSuffix(basePath, "/"),
+		info:     info,
 		security: SecurityConfig{
 			EnableJWT:   true,
 			EnableBasic: true,
@@ -113,7 +113,7 @@ func (g *OpenAPIGenerator) GenerateSpecification() map[string]any {
 		},
 		"servers": []map[string]any{
 			{
-				"url":         g.baseURL,
+				"url":         g.basePath,
 				"description": "API Server",
 			},
 		},

@@ -28,7 +28,7 @@ func init() {
 	f := restCmd.Flags()
 	f.StringP("rest.pg.connString", "c", "", "PostgreSQL connection string")
 	f.StringP("rest.listenAddr", "l", "", "REST server listen address")
-	f.String("rest.baseURL", "", "Base URL for API endpoints")
+	f.String("rest.basePath", "", "Base URL for API endpoints")
 	f.String("rest.oidc.clientID", "", "OIDC client ID")
 	f.String("rest.oidc.clientSecret", "", "OIDC client secret")
 	f.String("rest.oidc.issuer", "", "OIDC issuer URL")
@@ -85,8 +85,13 @@ func runRESTServer(cmd *cobra.Command, args []string) {
 		cfg.REST.ListenAddr = listenAddr
 	}
 
+	basePath := viper.GetString("rest.basePath")
+	if basePath != "" {
+		cfg.REST.BasePath = basePath
+	}
+
 	// Create and configure server
-	server, err := rest.NewServer(connString, cfg.REST.BaseURL, viper.Get("rest.omitempty").(bool) || cfg.REST.Omitempty)
+	server, err := rest.NewServer(connString, cfg.REST.BasePath, viper.Get("rest.omitempty").(bool) || cfg.REST.Omitempty)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

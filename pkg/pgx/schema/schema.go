@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 
 	pg "github.com/edgeflare/pigo/pkg/pgx"
 	"github.com/jackc/pgx/v5"
@@ -120,29 +122,19 @@ func (c *Cache) Watch() <-chan map[string]Table {
 	return c.watch
 }
 
+// handleUpdates runs listen, and reconnects if the connection is lost
 func (c *Cache) handleUpdates(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			notification, err := c.conn.WaitForNotification(ctx)
-			if err != nil {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					c.watch <- c.Snapshot()
-					fmt.Printf("notification error: %v\n", err)
-					continue
-				}
+			err := c.listen(ctx)
+			if err == nil || ctx.Err() != nil {
+				return
 			}
-
-			if notification.Payload == reloadPayload {
-				if err := c.reload(ctx); err != nil {
-					fmt.Printf("reload error: %v\n", err)
-				}
-			}
+			fmt.Printf("connection lost: %v — reconnecting...\n", err)
+			c.reconnectWithBackoff(ctx)
 		}
 	}
 }
@@ -383,9 +375,74 @@ func (c *Cache) SchemaHandler(mux *http.ServeMux, path ...string) {
 
 	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(c.tables); err != nil {
+		if err := json.NewEncoder(w).Encode(c.Snapshot()); err != nil {
 			http.Error(w, `{"error":"Internal server error"}`, http.StatusInternalServerError)
 			return
 		}
 	})
+}
+
+// listen blocks until the connection dies or ctx is cancelled.
+// Note: Init issues the first LISTEN; listen re-issues it on every
+// subsequent call (ie after each reconnect) because the new connection
+// has no subscriptions yet.
+func (c *Cache) listen(ctx context.Context) error {
+	if _, err := c.conn.Exec(ctx, "LISTEN "+reloadChannel); err != nil {
+		return err
+	}
+	for {
+		notification, err := c.conn.WaitForNotification(ctx)
+		if err != nil {
+			return err
+		}
+		if notification.Payload == reloadPayload {
+			if err := c.reload(ctx); err != nil {
+				fmt.Printf("reload error: %v\n", err)
+			}
+		}
+	}
+}
+
+func (c *Cache) reconnectWithBackoff(ctx context.Context) {
+	backoff := time.Second
+	const maxBackoff = 2 * time.Minute
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff + jitter()):
+		}
+
+		if err := c.reconnect(ctx); err != nil {
+			fmt.Printf("reconnect failed: %v\n", err)
+			backoff = min(backoff*2, maxBackoff)
+			continue
+		}
+
+		fmt.Println("reconnected successfully")
+		return
+	}
+}
+
+func (c *Cache) reconnect(ctx context.Context) error {
+	conn, err := c.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("pool.Acquire: %w", err)
+	}
+
+	c.mu.Lock()
+	old := c.conn
+	c.conn = conn.Hijack()
+	c.mu.Unlock()
+
+	if old != nil {
+		old.Close(context.Background())
+	}
+
+	return c.reload(ctx)
+}
+
+func jitter() time.Duration {
+	return time.Duration(rand.Int63n(int64(time.Second)))
 }

@@ -2,7 +2,6 @@ package rest
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,13 +18,13 @@ type Server struct {
 	pool        *pgxpool.Pool
 	mux         *http.ServeMux
 	schemaCache *schema.Cache
-	baseURL     string
+	basePath    string
 	middleware  []httputil.Middleware
 	httpServer  *http.Server
 	omitempty   bool
 }
 
-func NewServer(connString, baseURL string, omitempty ...bool) (*Server, error) {
+func NewServer(connString, basePath string, omitempty ...bool) (*Server, error) {
 	schemaCache, err := schema.NewCache(connString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create schema cache: %w", err)
@@ -40,7 +39,7 @@ func NewServer(connString, baseURL string, omitempty ...bool) (*Server, error) {
 		pool:        pool,
 		mux:         http.NewServeMux(),
 		schemaCache: schemaCache,
-		baseURL:     baseURL,
+		basePath:    basePath,
 		omitempty:   len(omitempty) > 0 && omitempty[0],
 	}
 
@@ -84,13 +83,13 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 	// 	log.Printf("%s %s %s %s %s %s %v", r.Method, r.URL.Path, r.RemoteAddr, time.Since(startTime), pgRole, r.UserAgent(), rec.StatusCode)
 	// }(mw.NewResponseRecorder(w))
 
-	path := strings.TrimPrefix(r.URL.Path, s.baseURL)
+	path := strings.TrimPrefix(r.URL.Path, s.basePath)
 	if path == "" || path == "/" {
 		html := fmt.Sprintf(`<!DOCTYPE html>
 	<title>PIGO</title>
 	<h1>PIGO REST API</h1>
 	<h3>Auto-generated REST API for PostgreSQL</h3>
-	<p><a href="%s/openapi.json">OpenAPI Specification</a></p>`, s.baseURL)
+	<p><a href="%s/openapi.json">OpenAPI Specification</a></p>`, s.basePath)
 
 		httputil.HTML(w, http.StatusOK, html)
 		return
@@ -151,7 +150,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request, table schema.
 
 func (s *Server) handlePost(w http.ResponseWriter, r *http.Request, table schema.Table) {
 	var data map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+	if err := httputil.Bind(r, &data); err != nil {
 		httputil.Error(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
@@ -169,7 +168,7 @@ func (s *Server) handlePatch(w http.ResponseWriter, r *http.Request, table schem
 	params := parseQueryParams(r)
 
 	var data map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+	if err := httputil.Bind(r, &data); err != nil {
 		httputil.Error(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
@@ -216,7 +215,7 @@ func (s *Server) executeQuery(w http.ResponseWriter, r *http.Request, params Que
 		countParams.Limit = 0
 		countParams.Offset = 0
 
-		table, err := s.tableFromPath(strings.TrimPrefix(r.URL.Path, s.baseURL))
+		table, err := s.tableFromPath(strings.TrimPrefix(r.URL.Path, s.basePath))
 		if err != nil {
 			httputil.Error(w, http.StatusNotFound, err.Error())
 			return
@@ -333,9 +332,9 @@ func (s *Server) addOpenAPIEndpoint() {
 		}
 		defer conn.Release()
 
-		openAPIGenerator := schema.NewOpenAPIGenerator(s.schemaCache, s.baseURL, info)
+		openAPIGenerator := schema.NewOpenAPIGenerator(s.schemaCache, s.basePath, info)
 		openAPIGenerator.ServeHTTP(w, r)
 	}
 
-	s.mux.Handle("/openapi.json", s.wrapWithMiddleware(openAPIHandler))
+	s.mux.Handle(strings.TrimRight(s.basePath, "/")+"/openapi.json", s.wrapWithMiddleware(openAPIHandler))
 }

@@ -39,7 +39,7 @@ func BasicAuthUser(r *http.Request) (string, bool) {
 	return user, ok
 }
 
-// Bind decodes the JSON body of an HTTP request into the given destination object.
+// Bind decodes the JSON body of an HTTP request and stores it in the value pointed to by dst.
 func Bind(r *http.Request, dst any) error {
 	return json.NewDecoder(r.Body).Decode(dst)
 }

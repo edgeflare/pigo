@@ -36,8 +36,8 @@ func (rr *ResponseRecorder) Write(b []byte) (int, error) {
 }
 
 // Retrieve log metadata from context
-func GetLogEntryMetadata(ctx context.Context) map[string]interface{} {
-	if metadata, ok := ctx.Value(httputil.LogEntryCtxKey).(map[string]interface{}); ok {
+func GetLogEntryMetadata(ctx context.Context) map[string]any {
+	if metadata, ok := ctx.Value(httputil.LogEntryCtxKey).(map[string]any); ok {
 		return metadata
 	}
 	return nil
@@ -90,7 +90,6 @@ func LoggerWithOptions(options *LoggerOptions) func(http.Handler) http.Handler {
 				}
 
 				rec := NewResponseRecorder(w)
-				// try to minimize the data passed via context
 				ctx := context.WithValue(r.Context(), httputil.LogEntryCtxKey, options.Logger)
 				r = r.WithContext(ctx)
 
@@ -100,7 +99,7 @@ func LoggerWithOptions(options *LoggerOptions) func(http.Handler) http.Handler {
 
 				pgRole, ok := r.Context().Value(httputil.OIDCRoleClaimCtxKey).(string)
 				if !ok {
-					fmt.Println("pg_role isn't set. to fix add logger after all middleware.AuthzFunc{}")
+					fmt.Println("logger might have been called before pg_role is set. to fix add logger after all middleware.AuthzFunc{}")
 					pgRole = "unknown"
 				}
 

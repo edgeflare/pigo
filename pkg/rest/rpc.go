@@ -37,7 +37,7 @@ type Function struct {
 
 // Add RPC handler registration to Server
 func (s *Server) registerRPCHandlers() {
-	s.mux.HandleFunc("/rpc/", s.wrapWithMiddleware(s.handleRPC))
+	s.mux.HandleFunc(strings.TrimRight(s.basePath, "/")+"/rpc/", s.wrapWithMiddleware(s.handleRPC))
 }
 
 // handleRPC handles function calls via /rpc/function_name
@@ -50,7 +50,7 @@ func (s *Server) handleRPC(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Release()
 
-	path := strings.TrimPrefix(r.URL.Path, s.baseURL+"/rpc/")
+	path := strings.TrimPrefix(r.URL.Path, s.basePath+"/rpc/")
 	if path == "" {
 		httputil.Error(w, http.StatusBadRequest, "Function name required")
 		return
