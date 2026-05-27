@@ -1,4 +1,4 @@
-package rest_test
+package age_test
 
 import (
 	"cmp"
@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/edgeflare/pigo/pkg/rest"
+	rest "github.com/edgeflare/pigo/pkg/x/age"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

@@ -51,6 +51,9 @@ func NewServer(connString, basePath string, omitempty ...bool) (*Server, error) 
 }
 
 func (s *Server) AddMiddleware(middleware ...httputil.Middleware) {
+	if s.httpServer != nil {
+		panic("cannot add middleware after server has started")
+	}
 	s.middleware = append(s.middleware, middleware...)
 }
 

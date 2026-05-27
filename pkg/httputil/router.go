@@ -22,7 +22,9 @@ type Middleware func(http.Handler) http.Handler
 // RouterOptions is a function type that represents options to configure a Router.
 type RouterOptions func(*Router)
 
-// Router is the main structure for handling HTTP routing and middleware.
+// Router handles HTTP routing and middleware chaining.
+// It implements http.Handler and can therefore be used with any standard
+// net/http server, httptest.NewServer, or embedded in other handlers.
 type Router struct {
 	mux        *http.ServeMux
 	server     *http.Server
@@ -93,6 +95,10 @@ func (r *Router) Use(mw Middleware, additional ...Middleware) {
 // Group creates a new sub-router with a specified prefix. The sub-router inherits the middleware
 // from its parent router.
 func (r *Router) Group(prefix string) *Router {
+	if strings.HasSuffix(prefix, "/") {
+		panic(fmt.Sprintf("httputil: group prefix %q must not end with '/'", prefix))
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return &Router{
@@ -103,44 +109,43 @@ func (r *Router) Group(prefix string) *Router {
 	}
 }
 
-// Handle registers an HTTP handler function for a given method and pattern as introduced in
-// [Routing Enhancements for Go 1.22](https://go.dev/blog/routing-enhancements)
-// The handler `METHOD /pattern` on a route group with a /prefix resolves to `METHOD /prefix/pattern`
+// Handle registers handler for "METHOD /path" patterns (Go 1.22+). Panics on malformed input.
 func (r *Router) Handle(methodPattern string, handler http.Handler) {
-	parts := strings.SplitN(methodPattern, " ", 2)
-	if len(parts) != 2 {
-		log.Fatalf("invalid method pattern: %s", methodPattern)
-	}
-	method, pattern := parts[0], parts[1]
-
+	method, pattern := splitMethodPattern(methodPattern)
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	// Create the final handler with all middleware applied
-	finalHandler := handler
-	for i := len(r.middleware) - 1; i >= 0; i-- {
-		finalHandler = r.middleware[i](finalHandler)
-	}
-	// fullPattern := r.prefix + pattern
-	fullPattern := fmt.Sprintf("%s %s%s", method, r.prefix, pattern)
-
-	r.mux.Handle(fullPattern, finalHandler)
+	prefix := r.prefix
+	r.mu.RUnlock()
+	fullPattern := fmt.Sprintf("%s %s%s", method, prefix, pattern)
+	r.mux.Handle(fullPattern, handler)
 }
 
-// ListenAndServe starts the server, automatically choosing between HTTP and HTTPS based on TLS config.
+// HandleFunc is a convenience wrapper around Handle for plain functions.
+func (r *Router) HandleFunc(methodPattern string, handler http.HandlerFunc) {
+	r.Handle(methodPattern, handler)
+}
+
+// ListenAndServe starts the HTTP (or HTTPS if TLS is configured) server on addr.
+// It sets the router itself as the server's Handler so that ServeHTTP is the
+// single entry point.
 func (r *Router) ListenAndServe(addr string) error {
 	fmt.Print(colorGreen + pigoASCIIArt + colorReset)
-	fmt.Printf("starting server on %s\n", addr)
+	log.Printf("starting server on %s", addr)
 
 	r.server.Addr = addr
-	r.server.Handler = r.applyMiddleware()
+	r.server.Handler = r
 
 	if r.server.TLSConfig != nil {
-		// HTTPS
-		return r.server.ListenAndServeTLS("", "") // Use empty strings to auto-detect cert/key in TLSConfig
+		// Certificates are already in TLSConfig; pass empty strings so the
+		// stdlib reads them from there rather than from files.
+		return r.server.ListenAndServeTLS("", "")
 	}
-	// HTTP
 	return r.server.ListenAndServe()
+}
+
+// ServeHTTP implements http.Handler, allowing Router to be used anywhere
+// an http.Handler is accepted - httptest.NewServer, http.ListenAndServe, etc.
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler().ServeHTTP(w, req)
 }
 
 // Shutdown gracefully shuts down the HTTP server.
@@ -149,21 +154,35 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	return r.server.Shutdown(ctx)
 }
 
-// applyMiddleware applies middleware to the http.Handler and returns a new http.Handler.
-func (r *Router) applyMiddleware() http.Handler {
+// handler returns the mux wrapped with all registered middleware.
+func (r *Router) handler() http.Handler {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	mw := slices.Clone(r.middleware)
+	r.mu.RUnlock()
+	return applyMiddleware(r.mux, mw)
+}
 
-	var handler http.Handler = r.mux
-	for i := len(r.middleware) - 1; i >= 0; i-- {
-		handler = r.middleware[i](handler)
+// applyMiddleware wraps h with each middleware in reverse order so that the
+// first element in the slice is the outermost (first to run) handler.
+func applyMiddleware(h http.Handler, mw []Middleware) http.Handler {
+	for i := len(mw) - 1; i >= 0; i-- {
+		h = mw[i](h)
 	}
-	return handler
+	return h
+}
+
+// splitMethodPattern splits "METHOD /path" into parts, panicking on malformed input.
+func splitMethodPattern(s string) (method, pattern string) {
+	method, pattern, ok := strings.Cut(s, " ")
+	if !ok || !strings.HasPrefix(pattern, "/") {
+		panic(fmt.Sprintf("httputil: invalid pattern %q: expected \"METHOD /path\"", s))
+	}
+	return method, pattern
 }
 
 // Constants for ASCII art and console colors
 const (
-	colorRed     = "\033[31m"
+	// colorRed     = "\033[31m"
 	colorGreen   = "\033[32m"
 	colorReset   = "\033[0m"
 	pigoASCIIArt = `
