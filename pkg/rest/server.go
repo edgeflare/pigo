@@ -88,12 +88,11 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	path := strings.TrimPrefix(r.URL.Path, s.basePath)
 	if path == "" || path == "/" {
-		html := fmt.Sprintf(`<!DOCTYPE html>
-	<title>PIGO</title>
-	<h1>PIGO REST API</h1>
-	<h3>Auto-generated REST API for PostgreSQL</h3>
-	<p><a href="%s/openapi.json">OpenAPI Specification</a></p>`, s.basePath)
-
+		html := fmt.Sprintf(`<!doctype html>
+<html><head><title>API Docs</title></head><body>
+<script id="api-reference" data-url="%s/openapi.json"></script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body></html>`, s.basePath)
 		httputil.HTML(w, http.StatusOK, html)
 		return
 	}
