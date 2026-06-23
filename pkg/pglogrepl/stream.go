@@ -150,25 +150,41 @@ func ensurePublication(ctx context.Context, conn *pgconn.PgConn, cfg Config) err
 			fmt.Fprintf(&createStmt, " FOR TABLE %s", strings.Join(pubObj.tables, ", "))
 		}
 
-		if len(cfg.Ops) > 0 || cfg.PartitionRoot {
+		var params []string
+		if len(cfg.Ops) > 0 {
+			ops := make([]string, len(cfg.Ops))
+			for i, o := range cfg.Ops {
+				ops[i] = string(o)
+			}
+			params = append(params, fmt.Sprintf("publish = '%s'", strings.Join(ops, ", ")))
+		}
+		if cfg.PartitionRoot {
+			params = append(params, "publish_via_partition_root = true")
+		}
+		if cfg.PublishGeneratedColumns != PublishGeneratedColumnsUnset {
+			verNum, err := serverVersionNum(ctx, conn)
+			if err != nil {
+				return fmt.Errorf("checking server version for publish_generated_columns: %w", err)
+			}
+			if verNum < minPgVersionGeneratedCols {
+				return fmt.Errorf("publishGeneratedColumns=%q requires PostgreSQL 18+, server is %d",
+					cfg.PublishGeneratedColumns, verNum)
+			}
+			params = append(params, fmt.Sprintf("publish_generated_columns = '%s'", cfg.PublishGeneratedColumns))
+		}
+
+		if len(params) > 0 {
 			createStmt.WriteString(" WITH (")
-			var params []string
-			if len(cfg.Ops) > 0 {
-				ops := make([]string, len(cfg.Ops))
-				for i, o := range cfg.Ops {
-					ops[i] = string(o)
-				}
-				params = append(params, fmt.Sprintf("publish = '%s'", strings.Join(ops, ", ")))
-			}
-			if cfg.PartitionRoot {
-				params = append(params, "publish_via_partition_root = true")
-			}
 			createStmt.WriteString(strings.Join(params, ", "))
 			createStmt.WriteString(")")
 		}
 
 		if _, err := conn.Exec(ctx, createStmt.String()).ReadAll(); err != nil {
 			return fmt.Errorf("create publication: %w", err)
+		}
+	} else {
+		if err := reconcilePublication(ctx, conn, cfg); err != nil {
+			return fmt.Errorf("alter publication: %w", err)
 		}
 	}
 
@@ -214,4 +230,27 @@ func parsePublicationTables(patterns []string) tablePattern {
 	}
 
 	return tp
+}
+
+func reconcilePublication(ctx context.Context, conn *pgconn.PgConn, cfg Config) error {
+	var params []string
+	if cfg.PublishGeneratedColumns != PublishGeneratedColumnsUnset {
+		verNum, err := serverVersionNum(ctx, conn)
+		if err != nil {
+			return fmt.Errorf("checking server version for publish_generated_columns: %w", err)
+		}
+		if verNum < minPgVersionGeneratedCols {
+			return fmt.Errorf("publishGeneratedColumns=%q requires PostgreSQL 18+, server is %d",
+				cfg.PublishGeneratedColumns, verNum)
+		}
+		params = append(params, fmt.Sprintf("publish_generated_columns = '%s'", cfg.PublishGeneratedColumns))
+	}
+	if len(params) == 0 {
+		return nil
+	}
+	sql := fmt.Sprintf("ALTER PUBLICATION %s SET (%s)", cfg.Publication, strings.Join(params, ", "))
+	if _, err := conn.Exec(ctx, sql).ReadAll(); err != nil {
+		return fmt.Errorf("alter publication: %w", err)
+	}
+	return nil
 }

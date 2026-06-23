@@ -22,6 +22,27 @@ const (
 	defaultPublication           = "pigo_pub"
 	defaultSlot                  = "pigo_slot"
 	defaultPlugin                = "pgoutput"
+	// minPgVersionGeneratedCols is the server_version_num floor for
+	// publish_generated_columns support (introduced in PG18).
+	minPgVersionGeneratedCols = 180000
+)
+
+// PublishGeneratedColumns controls whether STORED generated column values
+// are included in the logical replication stream.
+// See https://www.postgresql.org/docs/current/sql-createpublication.html#SQL-CREATEPUBLICATION-PARAMS-WITH-PUBLISH-GENERATED-COLUMNS
+type PublishGeneratedColumns string
+
+const (
+	// PublishGeneratedColumnsUnset omits the parameter from the CREATE
+	// PUBLICATION statement entirely, so the server default applies and
+	// pigo stays compatible with PG < 18. This is pigo's default.
+	PublishGeneratedColumnsUnset PublishGeneratedColumns = ""
+	// PublishGeneratedColumnsNone excludes generated column values; they
+	// are recomputed downstream instead (server default behavior).
+	PublishGeneratedColumnsNone PublishGeneratedColumns = "none"
+	// PublishGeneratedColumnsStored includes STORED generated column
+	// values in the change stream.
+	PublishGeneratedColumnsStored PublishGeneratedColumns = "stored"
 )
 
 // Config holds replication configuration.
@@ -40,6 +61,12 @@ type Config struct {
 	// not functional yet. manually execute sql to alter DEFAULT (streams primary key columns)
 	ReplicaIdentity map[string]ReplicaIdentity `json:"relreplident"`
 	BufferSize      int                        `json:"bufferSize"`
+
+	// PublishGeneratedColumns sets publish_generated_columns on the
+	// publication (PG18+). Leave unset ("") for compatibility with
+	// older servers; pigo validates the server version before applying
+	// "stored" and returns an error rather than silently downgrading.
+	PublishGeneratedColumns PublishGeneratedColumns `json:"publishGeneratedColumns"`
 }
 
 // ReplicaIdentity specifies what row data Postgres streams during UPDATE/DELETE operations:
@@ -91,6 +118,12 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.StandbyUpdateInterval < time.Second {
 		return fmt.Errorf("standby update interval must be at least 1 second")
+	}
+
+	switch cfg.PublishGeneratedColumns {
+	case PublishGeneratedColumnsUnset, PublishGeneratedColumnsNone, PublishGeneratedColumnsStored:
+	default:
+		return fmt.Errorf("invalid publishGeneratedColumns: %q (want \"\", \"none\", or \"stored\")", cfg.PublishGeneratedColumns)
 	}
 	return nil
 }

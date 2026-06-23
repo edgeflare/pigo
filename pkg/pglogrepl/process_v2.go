@@ -54,7 +54,7 @@ func handleInsertMessageV2(msg *pglogrepl.InsertMessageV2, relations map[uint32]
 		return cdc.Event{}
 	}
 
-	values := make(map[string]interface{})
+	values := make(map[string]any)
 	for idx, col := range msg.Tuple.Columns {
 		colName := rel.Columns[idx].Name
 		values[colName] = decodeColumn(col, typeMap, rel.Columns[idx].DataType)
@@ -83,7 +83,7 @@ func handleUpdateMessageV2(msg *pglogrepl.UpdateMessageV2, relations map[uint32]
 		return cdc.Event{}
 	}
 
-	oldValues := make(map[string]interface{})
+	oldValues := make(map[string]any)
 	if msg.OldTuple != nil {
 		for idx, col := range msg.OldTuple.Columns {
 			colName := rel.Columns[idx].Name
@@ -91,7 +91,7 @@ func handleUpdateMessageV2(msg *pglogrepl.UpdateMessageV2, relations map[uint32]
 		}
 	}
 
-	newValues := make(map[string]interface{})
+	newValues := make(map[string]any)
 	if msg.NewTuple != nil {
 		for idx, col := range msg.NewTuple.Columns {
 			colName := rel.Columns[idx].Name
@@ -123,7 +123,7 @@ func handleDeleteMessageV2(msg *pglogrepl.DeleteMessageV2, relations map[uint32]
 		return cdc.Event{}
 	}
 
-	oldValues := make(map[string]interface{})
+	oldValues := make(map[string]any)
 	for idx, col := range msg.OldTuple.Columns {
 		colName := rel.Columns[idx].Name
 		oldValues[colName] = decodeColumn(col, typeMap, rel.Columns[idx].DataType)

@@ -1,0 +1,39 @@
+rest:
+  listenAddr: ":8002"
+  pg:
+    connString: "host=localhost port=5432 user=pigo password=pigopw dbname=main sslmode=disable"
+  oidc:
+    issuer: https://dex.example.org/iam
+    skipTLSVerify: true
+    clientID: public-webui
+    clientSecret: any
+    roleClaimKey: .policy.pgrole
+  basicAuth: {}
+  anonRole: anon
+  basePath: /api
+
+pipeline:
+  peers:
+  - name: postgres-source
+    connector: postgres
+    config:
+      connString: "host=localhost port=5432 user=postgres password=postgrespw dbname=main replication=database"
+      # replication:
+      #   tables: ["*"]
+      #   publishGeneratedColumns: stored
+
+  - name: postgres-sink
+    connector: postgres
+    config:
+      connString: "host=localhost port=5433 user=postgres password=postgrespw dbname=main"
+
+  - name: debug
+    connector: debug
+
+  pipelines:
+  - name: stream-postgres-source-to-postgres-sink
+    sources:
+    - name: postgres-source
+    sinks:
+    - name: debug
+    - name: postgres-sink
