@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pglogrepl"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Stream starts logical replication and returns a channel of CDC events.
@@ -76,7 +75,7 @@ func ensureSlot(conn *pgconn.PgConn, name, plugin string) error {
 func streamEvents(ctx context.Context, conn *pgconn.PgConn, cfg *Config, events chan<- cdc.Event) {
 	defer close(events)
 	relations := make(map[uint32]*pglogrepl.RelationMessageV2)
-	typeMap := pgtype.NewMap()
+	typeMap := newTypeMap() // pgtype.NewMap()
 	nextStandby := time.Now().Add(cfg.StandbyUpdateInterval)
 	var walPos pglogrepl.LSN
 	inStream := false
