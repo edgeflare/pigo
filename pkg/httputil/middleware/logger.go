@@ -2,14 +2,15 @@ package middleware
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/edgeflare/pigo/pkg/httputil"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
+
+const loggerMessage = "http"
 
 // ResponseRecorder is a wrapper for http.ResponseWriter to capture status codes and durations.
 type ResponseRecorder struct {
@@ -35,80 +36,74 @@ func (rr *ResponseRecorder) Write(b []byte) (int, error) {
 	return rr.ResponseWriter.Write(b)
 }
 
-// Retrieve log metadata from context
-func GetLogEntryMetadata(ctx context.Context) map[string]any {
-	if metadata, ok := ctx.Value(httputil.LogEntryCtxKey).(map[string]any); ok {
-		return metadata
-	}
-	return nil
-}
-
 // LoggerOptions defines configuration for the logger middleware.
 type LoggerOptions struct {
-	Logger *zap.Logger
-	Format func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []zap.Field
+	Logger *slog.Logger
+	Format func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []slog.Attr
 }
 
-var defaultLogger *zap.Logger
-
-func init() {
-	var err error
-	defaultLogger, err = zap.NewProduction()
-	if err != nil {
-		panic(err)
+// logLevel returns an appropriate slog level for the HTTP status code.
+func logLevel(status int) slog.Level {
+	switch {
+	case status >= 500:
+		return slog.LevelError
+	case status >= 400:
+		return slog.LevelWarn
+	default:
+		return slog.LevelInfo
 	}
-	defer defaultLogger.Sync()
 }
 
 func LoggerWithOptions(options *LoggerOptions) func(http.Handler) http.Handler {
 	if options == nil {
-		options = &LoggerOptions{Logger: defaultLogger}
+		options = &LoggerOptions{Logger: slog.Default()}
 	}
-
+	if options.Logger == nil {
+		options.Logger = slog.Default()
+	}
 	if options.Format == nil {
-		options.Format = func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []zap.Field {
-			return []zap.Field{
-				zap.String("req_id", reqID),
-				zap.Int("status", rec.StatusCode),
-				zap.String("method", r.Method),
-				zap.String("host", r.Host),
-				zap.String("url", r.URL.String()),
-				zap.String("remote_addr", r.RemoteAddr),
-				zap.String("user_agent", r.UserAgent()),
-				zap.Duration("latency", latency),
+		options.Format = func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []slog.Attr {
+			return []slog.Attr{
+				slog.String("req_id", reqID),
+				slog.Int("status", rec.StatusCode),
+				slog.String("method", r.Method),
+				slog.String("host", r.Host),
+				slog.String("path", r.URL.Path),
+				slog.String("remote_addr", r.RemoteAddr),
+				slog.String("user_agent", r.UserAgent()),
+				slog.Duration("latency", latency),
 			}
 		}
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			if _, ok := r.Context().Value(httputil.LogEntryCtxKey).(*zap.Logger); !ok {
-				reqID, ok := r.Context().Value(httputil.RequestIDCtxKey).(string)
-				if !ok {
-					reqID = uuid.Nil.String()
-				}
-
-				rec := NewResponseRecorder(w)
-				ctx := context.WithValue(r.Context(), httputil.LogEntryCtxKey, options.Logger)
-				r = r.WithContext(ctx)
-
-				next.ServeHTTP(rec, r)
-
-				latency := time.Since(start)
-
-				pgRole, ok := r.Context().Value(httputil.OIDCRoleClaimCtxKey).(string)
-				if !ok {
-					fmt.Println("logger might have been called before pg_role is set. to fix add logger after all middleware.AuthzFunc{}")
-					pgRole = "unknown"
-				}
-
-				fields := options.Format(reqID, rec, r, latency)
-				fields = append(fields, zap.String("pg_role", pgRole))
-				options.Logger.Info("response", fields...)
-			} else {
+			if _, ok := r.Context().Value(httputil.LogEntryCtxKey).(*slog.Logger); ok {
 				next.ServeHTTP(w, r)
+				return
 			}
+
+			reqID, ok := r.Context().Value(httputil.RequestIDCtxKey).(string)
+			if !ok {
+				reqID = uuid.Nil.String()
+			}
+
+			rec := NewResponseRecorder(w)
+			ctx := context.WithValue(r.Context(), httputil.LogEntryCtxKey, options.Logger)
+			next.ServeHTTP(rec, r.WithContext(ctx))
+
+			latency := time.Since(rec.start)
+
+			pgRole, ok := r.Context().Value(httputil.OIDCRoleClaimCtxKey).(string)
+			if !ok {
+				options.Logger.Debug("pg_role not set; logger middleware may be ordered before AuthzFunc")
+				pgRole = "unknown"
+			}
+
+			attrs := options.Format(reqID, rec, r, latency)
+			attrs = append(attrs, slog.String("pg_role", pgRole))
+
+			options.Logger.LogAttrs(r.Context(), logLevel(rec.StatusCode), loggerMessage, attrs...)
 		})
 	}
 }

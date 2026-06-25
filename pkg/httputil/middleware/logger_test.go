@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,117 +13,142 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
-func newTestLogger() (*zap.Logger, *observer.ObservedLogs) {
-	core, logs := observer.New(zap.InfoLevel)
-	logger := zap.New(core)
-	return logger, logs
+// observedRecord captures a single log record for assertion.
+type observedRecord struct {
+	Level   slog.Level
+	Message string
+	Attrs   map[string]any
 }
 
-func TestGetLogEntryMetadata(t *testing.T) {
-	ctx := context.WithValue(context.Background(), httputil.LogEntryCtxKey, map[string]interface{}{"foo": "bar"})
-	metadata := GetLogEntryMetadata(ctx)
-	require.NotNil(t, metadata)
-	assert.Equal(t, "bar", metadata["foo"])
+// observingHandler is a slog.Handler that collects records in memory.
+type observingHandler struct {
+	mu      sync.Mutex
+	records []observedRecord
+	level   slog.Level
+	attrs   []slog.Attr
+}
 
-	ctx = context.Background()
-	metadata = GetLogEntryMetadata(ctx)
-	assert.Nil(t, metadata)
+func (h *observingHandler) Enabled(_ context.Context, l slog.Level) bool { return l >= h.level }
+
+func (h *observingHandler) Handle(_ context.Context, r slog.Record) error {
+	m := make(map[string]any)
+	for _, a := range h.attrs {
+		m[a.Key] = a.Value.Any()
+	}
+	r.Attrs(func(a slog.Attr) bool {
+		m[a.Key] = a.Value.Any()
+		return true
+	})
+	h.mu.Lock()
+	h.records = append(h.records, observedRecord{Level: r.Level, Message: r.Message, Attrs: m})
+	h.mu.Unlock()
+	return nil
+}
+
+func (h *observingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	merged := make([]slog.Attr, len(h.attrs)+len(attrs))
+	copy(merged, h.attrs)
+	copy(merged[len(h.attrs):], attrs)
+	return &observingHandler{level: h.level, attrs: merged}
+}
+
+func (h *observingHandler) WithGroup(name string) slog.Handler { return h }
+
+func newTestLogger(level slog.Level) (*slog.Logger, *observingHandler) {
+	h := &observingHandler{level: level}
+	return slog.New(h), h
 }
 
 func TestLoggerWithOptions(t *testing.T) {
-	logger, logs := newTestLogger()
+	logger, obs := newTestLogger(slog.LevelInfo)
 	options := &LoggerOptions{
 		Logger: logger,
-		Format: func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []zap.Field {
-			return []zap.Field{
-				zap.String("test", "log"),
-			}
+		Format: func(reqID string, rec *ResponseRecorder, r *http.Request, latency time.Duration) []slog.Attr {
+			return []slog.Attr{slog.String("test", "log")}
 		},
 	}
-	middleware := LoggerWithOptions(options)
 
-	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := LoggerWithOptions(options)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/foo", nil)
-	rr := httptest.NewRecorder()
+	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	handler.ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, 1, logs.Len())
-	assert.Equal(t, "response", logs.All()[0].Message)
-	assert.Equal(t, "log", logs.All()[0].ContextMap()["test"])
+	require.Len(t, obs.records, 1)
+	assert.Equal(t, loggerMessage, obs.records[0].Message)
+	assert.Equal(t, slog.LevelInfo, obs.records[0].Level)
+	assert.Equal(t, "log", obs.records[0].Attrs["test"])
 }
 
 func TestLoggerWithDefaultOptions(t *testing.T) {
-	logger, logs := newTestLogger()
-	defaultLogger = logger
-	middleware := LoggerWithOptions(nil)
+	logger, obs := newTestLogger(slog.LevelInfo)
+	options := &LoggerOptions{Logger: logger}
 
-	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := LoggerWithOptions(options)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/foo", nil)
-	rr := httptest.NewRecorder()
+	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	handler.ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, 1, logs.Len())
-	assert.Equal(t, "response", logs.All()[0].Message)
-	assert.Equal(t, "GET", logs.All()[0].ContextMap()["method"])
+	require.Len(t, obs.records, 1)
+	assert.Equal(t, loggerMessage, obs.records[0].Message)
+	assert.Equal(t, "GET", obs.records[0].Attrs["method"])
 }
 
 func TestLoggerWithoutRequestID(t *testing.T) {
-	logger, logs := newTestLogger()
-	options := &LoggerOptions{
-		Logger: logger,
-	}
-	middleware := LoggerWithOptions(options)
+	logger, obs := newTestLogger(slog.LevelInfo)
 
-	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := LoggerWithOptions(&LoggerOptions{Logger: logger})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/foo", nil)
-	rr := httptest.NewRecorder()
+	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	handler.ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, 1, logs.Len())
-	assert.Equal(t, "response", logs.All()[0].Message)
-	assert.Equal(t, uuid.Nil.String(), logs.All()[0].ContextMap()["req_id"])
+	require.Len(t, obs.records, 1)
+	assert.Equal(t, uuid.Nil.String(), obs.records[0].Attrs["req_id"])
 }
 
 func TestLoggerWithRequestID(t *testing.T) {
-	logger, logs := newTestLogger()
-	options := &LoggerOptions{
-		Logger: logger,
-	}
-	middleware := LoggerWithOptions(options)
+	logger, obs := newTestLogger(slog.LevelInfo)
 
-	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := LoggerWithOptions(&LoggerOptions{Logger: logger})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/foo", nil)
 	reqID := uuid.New().String()
-	ctx := context.WithValue(req.Context(), httputil.RequestIDCtxKey, reqID)
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/foo", nil)
+	req = req.WithContext(context.WithValue(req.Context(), httputil.RequestIDCtxKey, reqID))
+	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	handler.ServeHTTP(rr, req)
+	require.Len(t, obs.records, 1)
+	assert.Equal(t, reqID, obs.records[0].Attrs["req_id"])
+}
 
-	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, 1, logs.Len())
-	assert.Equal(t, "response", logs.All()[0].Message)
-	assert.Equal(t, reqID, logs.All()[0].ContextMap()["req_id"])
+func TestLoggerLevelByStatusCode(t *testing.T) {
+	cases := []struct {
+		status    int
+		wantLevel slog.Level
+	}{
+		{http.StatusOK, slog.LevelInfo},
+		{http.StatusNotFound, slog.LevelWarn},
+		{http.StatusInternalServerError, slog.LevelError},
+	}
+
+	for _, tc := range cases {
+		logger, obs := newTestLogger(slog.LevelInfo)
+		handler := LoggerWithOptions(&LoggerOptions{Logger: logger})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(tc.status)
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		handler.ServeHTTP(httptest.NewRecorder(), req)
+
+		require.Len(t, obs.records, 1)
+		assert.Equal(t, tc.wantLevel, obs.records[0].Level, "status %d", tc.status)
+	}
 }

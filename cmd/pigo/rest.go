@@ -11,10 +11,13 @@ import (
 	"time"
 
 	mw "github.com/edgeflare/pigo/pkg/httputil/middleware"
+	"github.com/edgeflare/pigo/pkg/logger"
 	"github.com/edgeflare/pigo/pkg/rest"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	otlploggrpc "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
 var restCmd = &cobra.Command{
@@ -135,9 +138,34 @@ func runRESTServer(cmd *cobra.Command, args []string) {
 
 	server.AddMiddleware(mw.Postgres(pool, pgMiddleware...))
 
+	var otelLoggerProvider *sdklog.LoggerProvider
+
+	otelEndpoint := os.Getenv("PIGO_OTEL_ENDPOINT") // e.g. "localhost:4317"
+	logOtel := func() bool { return otelEndpoint != "" }()
+	if logOtel {
+		otelLoggerProvider, err = newOTelLoggerProvider(ctx, otelEndpoint)
+		if err != nil {
+			panic(err)
+		}
+		defer otelLoggerProvider.Shutdown(ctx)
+	}
+
+	l, err := logger.New(logger.Options{
+		Stderr: true,
+		JSON:   true,
+		Level:  logger.ParseLevel(logLevel),
+		// AddSource: false,
+		// OTelScope: "pigo-<hostname>",
+		OTel:           logOtel,
+		LoggerProvider: otelLoggerProvider,
+	})
+	if err != nil {
+		log.Fatalf("failed to create logger: %v", err)
+	}
+
 	// pg_role is set by the mw.AuthzFunc{} middleware. to include pg_role in request log, add logger middleware after all mw.AuthzFunc{}
 	if logLevel != "none" {
-		server.AddMiddleware(mw.LoggerWithOptions(nil))
+		server.AddMiddleware(mw.LoggerWithOptions(&mw.LoggerOptions{Logger: l}))
 	}
 	// Handle graceful shutdown
 	stop := make(chan os.Signal, 1)
@@ -160,4 +188,19 @@ func runRESTServer(cmd *cobra.Command, args []string) {
 	}
 
 	log.Println("Server gracefully stopped")
+}
+
+func newOTelLoggerProvider(ctx context.Context, endpoint string) (*sdklog.LoggerProvider, error) {
+	opts := []otlploggrpc.Option{otlploggrpc.WithInsecure()}
+	if endpoint != "" {
+		opts = append(opts, otlploggrpc.WithEndpoint(endpoint))
+	}
+
+	exp, err := otlploggrpc.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exp)),
+	), nil
 }
