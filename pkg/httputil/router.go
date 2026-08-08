@@ -114,9 +114,10 @@ func (r *Router) Handle(methodPattern string, handler http.Handler) {
 	method, pattern := splitMethodPattern(methodPattern)
 	r.mu.RLock()
 	prefix := r.prefix
+	mw := slices.Clone(r.middleware)
 	r.mu.RUnlock()
 	fullPattern := fmt.Sprintf("%s %s%s", method, prefix, pattern)
-	r.mux.Handle(fullPattern, handler)
+	r.mux.Handle(fullPattern, applyMiddleware(handler, mw))
 }
 
 // HandleFunc is a convenience wrapper around Handle for plain functions.
