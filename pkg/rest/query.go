@@ -2,7 +2,9 @@ package rest
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/edgeflare/pigo/pkg/pgx/schema"
@@ -11,12 +13,12 @@ import (
 
 // QueryParams holds parsed query parameters in a structured way
 type QueryParams struct {
-	Select     []string                 // Columns to select
-	Order      []OrderParam             // Order by columns
-	Limit      int                      // Limit results
-	Offset     int                      // Offset results
-	Filters    map[string][]FilterParam // Column filters
-	EmbedJoins []JoinParam              // Embedded resource joins (foreign keys)
+	Select     []string     // Columns to select
+	Order      []OrderParam // Order by columns
+	Limit      int          // Limit results
+	Offset     int          // Offset results
+	Filters    []RawFilter  // Horizontal filters (column filters and and/or trees), AND-ed together
+	EmbedJoins []JoinParam  // Embedded resource joins (foreign keys)
 }
 
 type JoinParam struct {
@@ -27,9 +29,7 @@ type JoinParam struct {
 
 // Parse query parameters from request
 func parseQueryParams(r *http.Request) QueryParams {
-	params := QueryParams{
-		Filters: make(map[string][]FilterParam),
-	}
+	params := QueryParams{}
 
 	// Get URL query parameters
 	queryValues := r.URL.Query()
@@ -56,15 +56,17 @@ func parseQueryParams(r *http.Request) QueryParams {
 		params.Offset = parseIntParam(offset, 0)
 	}
 
-	// Parse filter parameters (everything else)
-	for key, values := range queryValues {
+	// Everything else is a filter: column filters (age=gte.18) and logic trees
+	// (or=(...), not.and=(...)). They're parsed and checked against the table
+	// when the query is built, so malformed filters become 400 errors there.
+	// Repeated keys (?age=gte.18&age=lte.65) are all applied, as in PostgREST;
+	// keys are sorted so the generated SQL is deterministic.
+	for _, key := range slices.Sorted(maps.Keys(queryValues)) {
 		if isReservedParam(key) {
 			continue
 		}
-
-		// Handle column filters
-		if len(values) > 0 {
-			params.Filters[key] = parseFilterParam(values[0])
+		for _, value := range queryValues[key] {
+			params.Filters = append(params.Filters, RawFilter{Key: key, Value: value})
 		}
 	}
 
@@ -74,83 +76,6 @@ func parseQueryParams(r *http.Request) QueryParams {
 // Parse select parameter, supports nested selects for embedding resources
 func parseSelectParam(select_ string) []string {
 	return strings.Split(select_, ",")
-}
-
-type FilterParam struct {
-	Operator string
-	Value    any
-}
-
-// Parse filter parameter
-func parseFilterParam(value string) []FilterParam {
-	result := make([]FilterParam, 0)
-
-	// PostgREST supports these operators: eq, gt, lt, gte, lte, neq, like, ilike, in, is, fts, plfts, phfts
-	operators := map[string]string{
-		"eq":    "=",
-		"gt":    ">",
-		"lt":    "<",
-		"gte":   ">=",
-		"lte":   "<=",
-		"neq":   "!=",
-		"like":  "LIKE",
-		"ilike": "ILIKE",
-		"in":    "IN",
-		"is":    "IS",
-		"fts":   "@@",
-		"plfts": "@@",
-		"phfts": "@@",
-		"cs":    "@>",
-		"cd":    "<@",
-	}
-
-	// Skip split by comma if this is a containment operator
-	// https://www.postgresql.org/docs/current/datatype-json.html#JSON-CONTAINMENT
-	hasContainmentOperator := strings.HasPrefix(value, "cs.") || strings.HasPrefix(value, "cd.")
-
-	var orParts []string
-	if hasContainmentOperator {
-		orParts = []string{value}
-	} else {
-		orParts = strings.Split(value, ",")
-	}
-
-	for _, orPart := range orParts {
-		// Default to equality if no operator is specified
-		operator := "="
-		val := orPart
-
-		// Check for operators
-		for op, sqlOp := range operators {
-			if strings.HasPrefix(orPart, op+".") {
-				operator = sqlOp
-				val = orPart[len(op)+1:]
-				break
-			}
-		}
-
-		// Handle IS NULL and IS NOT NULL
-		var filterValue any
-		if val == "null" && operator == "=" {
-			operator = "IS"
-			filterValue = nil
-		} else if val == "null" && operator == "!=" {
-			operator = "IS NOT"
-			filterValue = nil
-		} else if operator == "@>" || operator == "<@" {
-			// Handle array/JSONB containment operators
-			filterValue = convertToPostgresArrayOrJSON(val)
-		} else {
-			filterValue = val
-		}
-
-		result = append(result, FilterParam{
-			Operator: operator,
-			Value:    filterValue,
-		})
-	}
-
-	return result
 }
 
 // Parse integer parameter with default value
@@ -170,211 +95,104 @@ func isReservedParam(name string) bool {
 		"order":  true,
 		"limit":  true,
 		"offset": true,
+		// PostgREST also reserves these (POST/PATCH column list, upsert target).
+		// "and" / "or" are not reserved: they're logic-tree filters.
+		"columns":     true,
+		"on_conflict": true,
 	}
 	return reserved[name]
 }
 
 // Build SELECT query from table schema and query parameters with type casting
 func buildSelectQuery(table schema.Table, params QueryParams) (string, []any, error) {
-	// Initialize query builder
 	var query strings.Builder
-	var args []any
-	var argIndex int = 1
+	var args argList
 
-	// Start SELECT statement
 	query.WriteString("SELECT ")
+	query.WriteString(selectList(table, params.Select))
+	query.WriteString(" FROM ")
+	query.WriteString(pgx.Identifier{table.Schema, table.Name}.Sanitize())
 
-	// Add columns to select with type casting where needed
-	if len(params.Select) > 0 {
-		columnList := make([]string, 0, len(params.Select))
-		for _, col := range params.Select {
-			// Verify column exists in schema
-			var found bool
-			var dataType string
-			for _, schemaCol := range table.Columns {
-				if schemaCol.Name == col {
-					found = true
-					dataType = schemaCol.DataType
-					break
-				}
-			}
-			if found {
-				columnExpr := columnCastExpression(col, dataType)
-				columnList = append(columnList, columnExpr)
-			}
-		}
-		query.WriteString(strings.Join(columnList, ", "))
-	} else {
-		// Select all columns with type casting
-		columnList := make([]string, 0, len(table.Columns))
-		for _, col := range table.Columns {
-			columnExpr := columnCastExpression(col.Name, col.DataType)
-			columnList = append(columnList, columnExpr)
-		}
-
-		if len(columnList) > 0 {
-			query.WriteString(strings.Join(columnList, ", "))
-		} else {
-			query.WriteString("*")
-		}
+	where, err := buildWhereClause(table, params.Filters, &args)
+	if err != nil {
+		return "", nil, err
 	}
-
-	// Add FROM clause
-	query.WriteString(fmt.Sprintf(" FROM \"%s\".\"%s\"", table.Schema, table.Name))
-
-	// Add WHERE clause for filters
-	if len(params.Filters) > 0 {
+	if where != "" {
 		query.WriteString(" WHERE ")
-		whereClauses := make([]string, 0)
-		for column, filters := range params.Filters {
-			// Verify column exists
-			found := false
-			for _, schemaCol := range table.Columns {
-				if schemaCol.Name == column {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-
-			// Group filters for this column
-			columnFilters := make([]string, 0)
-			for _, filter := range filters {
-				if filter.Value == nil {
-					// Handle IS NULL and IS NOT NULL
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s NULL", column, filter.Operator))
-				} else if filter.Operator == "IN" {
-					// Handle IN operator
-					inValues := strings.Split(filter.Value.(string), ",")
-					placeholders := make([]string, len(inValues))
-					for i, val := range inValues {
-						placeholders[i] = fmt.Sprintf("$%d", argIndex)
-						args = append(args, val)
-						argIndex++
-					}
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" IN (%s)", column, strings.Join(placeholders, ", ")))
-				} else {
-					// Standard operators
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s $%d", column, filter.Operator, argIndex))
-					args = append(args, filter.Value)
-					argIndex++
-				}
-			}
-
-			if len(columnFilters) > 0 {
-				// Combine with OR for multiple filters on same column
-				whereClauses = append(whereClauses, fmt.Sprintf("(%s)", strings.Join(columnFilters, " OR ")))
-			}
-		}
-
-		if len(whereClauses) > 0 {
-			// Combine with AND for different columns
-			query.WriteString(strings.Join(whereClauses, " AND "))
-		} else {
-			// Remove WHERE if no valid filters
-			query.Reset()
-
-			// Rebuild SELECT with type casting
-			query.WriteString("SELECT ")
-			if len(params.Select) > 0 {
-				columnList := make([]string, 0, len(params.Select))
-				for _, col := range params.Select {
-					// Find column data type
-					var dataType string
-					for _, schemaCol := range table.Columns {
-						if schemaCol.Name == col {
-							dataType = schemaCol.DataType
-							break
-						}
-					}
-					columnExpr := columnCastExpression(col, dataType)
-					columnList = append(columnList, columnExpr)
-				}
-				query.WriteString(strings.Join(columnList, ", "))
-			} else {
-				// Select all columns with type casting
-				columnList := make([]string, 0, len(table.Columns))
-				for _, col := range table.Columns {
-					columnExpr := columnCastExpression(col.Name, col.DataType)
-					columnList = append(columnList, columnExpr)
-				}
-
-				if len(columnList) > 0 {
-					query.WriteString(strings.Join(columnList, ", "))
-				} else {
-					query.WriteString("*")
-				}
-			}
-
-			query.WriteString(fmt.Sprintf(" FROM \"%s\".\"%s\"", table.Schema, table.Name))
-		}
+		query.WriteString(where)
 	}
 
-	// Add ORDER BY clause
-	if len(params.Order) > 0 {
+	orderBy, err := buildOrderByClause(table, params.Order, &args)
+	if err != nil {
+		return "", nil, err
+	}
+	if orderBy != "" {
 		query.WriteString(" ORDER BY ")
-		orderClauses := make([]string, 0, len(params.Order))
-
-		for _, order := range params.Order {
-			if order.Similarity != "" {
-				found := false
-				for _, schemaCol := range table.Columns {
-					if schemaCol.Name == order.Column {
-						found = true
-						break
-					}
-				}
-
-				if found {
-					// build similarity function call
-					similarityClause := fmt.Sprintf("similarity(\"%s\", '%s') %s NULLS %s",
-						order.Column,
-						strings.ReplaceAll(order.Similarity, "'", "''"), // TODO: sanitize/escapeSQLString
-						strings.ToUpper(order.Direction),
-						strings.ToUpper(order.NullsPosition))
-					orderClauses = append(orderClauses, similarityClause)
-				}
-			} else {
-				// regular ordering by column name
-				found := false
-				for _, schemaCol := range table.Columns {
-					if schemaCol.Name == order.Column {
-						found = true
-						break
-					}
-				}
-
-				if found {
-					orderClauses = append(orderClauses, fmt.Sprintf("\"%s\" %s NULLS %s",
-						order.Column,
-						strings.ToUpper(order.Direction),
-						strings.ToUpper(order.NullsPosition)))
-				}
-			}
-		}
-
-		if len(orderClauses) > 0 {
-			query.WriteString(strings.Join(orderClauses, ", "))
-		}
+		query.WriteString(orderBy)
 	}
 
-	// Add LIMIT clause
 	if params.Limit > 0 {
-		query.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
-		args = append(args, params.Limit)
-		argIndex++
+		query.WriteString(" LIMIT ")
+		query.WriteString(args.add(params.Limit))
 	}
-
-	// Add OFFSET clause
 	if params.Offset > 0 {
-		query.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
-		args = append(args, params.Offset)
-		argIndex++
+		query.WriteString(" OFFSET ")
+		query.WriteString(args.add(params.Offset))
 	}
 
 	return query.String(), args, nil
+}
+
+// selectList renders the SELECT column list with type casting. "*" (also
+// PostgREST's default) expands to every column; unknown columns are skipped.
+func selectList(table schema.Table, selected []string) string {
+	if len(selected) == 0 {
+		if len(table.Columns) == 0 {
+			return "*"
+		}
+		selected = []string{"*"}
+	}
+	columnList := make([]string, 0, len(table.Columns))
+	for _, name := range selected {
+		if name == "*" {
+			for _, col := range table.Columns {
+				columnList = append(columnList, columnCastExpression(col.Name, col.DataType))
+			}
+		} else if col, ok := findColumn(table, name); ok {
+			columnList = append(columnList, columnCastExpression(col.Name, col.DataType))
+		}
+	}
+	return strings.Join(columnList, ", ")
+}
+
+var (
+	orderDirections = map[string]string{"asc": "ASC", "desc": "DESC"}
+	nullsPositions  = map[string]string{"first": "NULLS FIRST", "last": "NULLS LAST"}
+)
+
+// buildOrderByClause renders the ORDER BY list (without the keywords).
+// Unknown columns are an error, as in PostgREST, rather than invalid SQL or
+// silently unordered results.
+func buildOrderByClause(table schema.Table, order []OrderParam, args *argList) (string, error) {
+	clauses := make([]string, 0, len(order))
+	for _, o := range order {
+		col, ok := findColumn(table, o.Column)
+		if !ok {
+			return "", fmt.Errorf("column %s.%s does not exist", table.Name, o.Column)
+		}
+		direction, okDir := orderDirections[strings.ToLower(o.Direction)]
+		nulls, okNulls := nullsPositions[strings.ToLower(o.NullsPosition)]
+		if !okDir || !okNulls {
+			return "", fmt.Errorf("invalid ordering for column %s", o.Column)
+		}
+		expr := quoteIdent(col.Name)
+		if o.Similarity != "" {
+			// pg_trgm similarity(); the search string is a bind parameter
+			expr = "similarity(" + expr + ", " + args.add(o.Similarity) + ")"
+		}
+		clauses = append(clauses, expr+" "+direction+" "+nulls)
+	}
+	return strings.Join(clauses, ", "), nil
 }
 
 // Build INSERT query from table schema and data
@@ -434,8 +252,7 @@ func buildInsertQuery(table schema.Table, data map[string]any, headers *Headers)
 func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParams, headers *Headers) (string, []any, error) {
 	// Initialize query builder
 	var query strings.Builder
-	var args []any
-	var argIndex int = 1
+	var args argList
 
 	// Start UPDATE statement
 	query.WriteString(fmt.Sprintf("UPDATE \"%s\".\"%s\" SET ", table.Schema, table.Name))
@@ -453,9 +270,7 @@ func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParam
 		}
 
 		if found {
-			setClauses = append(setClauses, fmt.Sprintf("\"%s\" = $%d", key, argIndex))
-			args = append(args, value)
-			argIndex++
+			setClauses = append(setClauses, fmt.Sprintf("\"%s\" = %s", key, args.add(value)))
 		}
 	}
 
@@ -465,58 +280,14 @@ func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParam
 
 	query.WriteString(strings.Join(setClauses, ", "))
 
-	// Add WHERE clause for filters
-	if len(params.Filters) > 0 {
+	// Add WHERE clause for filters (same PostgREST filtering as SELECT)
+	where, err := buildWhereClause(table, params.Filters, &args)
+	if err != nil {
+		return "", nil, err
+	}
+	if where != "" {
 		query.WriteString(" WHERE ")
-
-		whereClauses := make([]string, 0)
-		for column, filters := range params.Filters {
-			// Verify column exists
-			found := false
-			for _, schemaCol := range table.Columns {
-				if schemaCol.Name == column {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-
-			// Group filters for this column
-			columnFilters := make([]string, 0)
-			for _, filter := range filters {
-				if filter.Value == nil {
-					// Handle IS NULL and IS NOT NULL
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s NULL", column, filter.Operator))
-				} else if filter.Operator == "IN" {
-					// Handle IN operator
-					inValues := strings.Split(filter.Value.(string), ",")
-					placeholders := make([]string, len(inValues))
-					for i, val := range inValues {
-						placeholders[i] = fmt.Sprintf("$%d", argIndex)
-						args = append(args, val)
-						argIndex++
-					}
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" IN (%s)", column, strings.Join(placeholders, ", ")))
-				} else {
-					// Standard operators
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s $%d", column, filter.Operator, argIndex))
-					args = append(args, filter.Value)
-					argIndex++
-				}
-			}
-
-			if len(columnFilters) > 0 {
-				// Combine with OR for multiple filters on same column
-				whereClauses = append(whereClauses, fmt.Sprintf("(%s)", strings.Join(columnFilters, " OR ")))
-			}
-		}
-
-		if len(whereClauses) > 0 {
-			// Combine with AND for different columns
-			query.WriteString(strings.Join(whereClauses, " AND "))
-		}
+		query.WriteString(where)
 	}
 
 	// Add RETURNING clause only if requested (to return the updated row/s)
@@ -538,65 +309,21 @@ func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParam
 func buildDeleteQuery(table schema.Table, params QueryParams, headers *Headers) (string, []any, error) {
 	// Initialize query builder
 	var query strings.Builder
-	var args []any
-	var argIndex int = 1
+	var args argList
 
 	// Start DELETE statement
 	query.WriteString(fmt.Sprintf("DELETE FROM \"%s\".\"%s\"", table.Schema, table.Name))
 
-	// Add WHERE clause for filters
-	if len(params.Filters) > 0 {
-		query.WriteString(" WHERE ")
-
-		whereClauses := make([]string, 0)
-		for column, filters := range params.Filters {
-			// Verify column exists
-			found := false
-			for _, schemaCol := range table.Columns {
-				if schemaCol.Name == column {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-
-			// Group filters for this column
-			columnFilters := make([]string, 0)
-			for _, filter := range filters {
-				if filter.Value == nil {
-					// Handle IS NULL and IS NOT NULL
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s NULL", column, filter.Operator))
-				} else if filter.Operator == "IN" {
-					// Handle IN operator
-					inValues := strings.Split(filter.Value.(string), ",")
-					placeholders := make([]string, len(inValues))
-					for i, val := range inValues {
-						placeholders[i] = fmt.Sprintf("$%d", argIndex)
-						args = append(args, val)
-						argIndex++
-					}
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" IN (%s)", column, strings.Join(placeholders, ", ")))
-				} else {
-					// Standard operators
-					columnFilters = append(columnFilters, fmt.Sprintf("\"%s\" %s $%d", column, filter.Operator, argIndex))
-					args = append(args, filter.Value)
-					argIndex++
-				}
-			}
-
-			if len(columnFilters) > 0 {
-				// Combine with OR for multiple filters on same column
-				whereClauses = append(whereClauses, fmt.Sprintf("(%s)", strings.Join(columnFilters, " OR ")))
-			}
-		}
-
-		if len(whereClauses) > 0 {
-			// Combine with AND for different columns
-			query.WriteString(strings.Join(whereClauses, " AND "))
-		}
+	// Add WHERE clause for filters (same PostgREST filtering as SELECT)
+	where, err := buildWhereClause(table, params.Filters, &args)
+	if err != nil {
+		return "", nil, err
 	}
+	if where != "" {
+		query.WriteString(" WHERE ")
+		query.WriteString(where)
+	}
+
 	// Add RETURNING clause only if requested (to return the deleted row/s)
 	if headers != nil && headers.Prefer != nil && headers.Prefer.WantsRepresentation() {
 		query.WriteString(" RETURNING ")

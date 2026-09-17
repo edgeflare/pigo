@@ -1,4 +1,4 @@
-issuer: http://192.168.1.2:5556/dex
+issuer: http://YOUR.LAN.IP.ADDR:5556/iam
 storage:
   type: postgres
   config:
@@ -52,3 +52,4 @@ staticPasswords:
 oauth2:
   skipApprovalScreen: true
   alwaysShowLoginScreen: false
+  passwordConnector: local # password-grant

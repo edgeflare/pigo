@@ -36,8 +36,8 @@ type Transaction struct {
 
 // Payload represents the actual change data
 type Payload struct {
-	Before      interface{}  `json:"before"`
-	After       interface{}  `json:"after"`
+	Before      any          `json:"before"`
+	After       any          `json:"after"`
 	Source      Source       `json:"source"`
 	Op          Operation    `json:"op"`
 	TsMs        int64        `json:"ts_ms"`
@@ -140,12 +140,12 @@ func (b *EventBuilder) WithOperation(op Operation) *EventBuilder {
 	return b
 }
 
-func (b *EventBuilder) WithBefore(before interface{}) *EventBuilder {
+func (b *EventBuilder) WithBefore(before any) *EventBuilder {
 	b.event.Payload.Before = before
 	return b
 }
 
-func (b *EventBuilder) WithAfter(after interface{}) *EventBuilder {
+func (b *EventBuilder) WithAfter(after any) *EventBuilder {
 	b.event.Payload.After = after
 	return b
 }
