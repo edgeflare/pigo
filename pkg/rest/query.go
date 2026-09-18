@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
@@ -156,10 +157,10 @@ func selectList(table schema.Table, selected []string) string {
 	for _, name := range selected {
 		if name == "*" {
 			for _, col := range table.Columns {
-				columnList = append(columnList, columnCastExpression(col.Name, col.DataType))
+				columnList = append(columnList, columnCastExpression(col))
 			}
 		} else if col, ok := findColumn(table, name); ok {
-			columnList = append(columnList, columnCastExpression(col.Name, col.DataType))
+			columnList = append(columnList, columnCastExpression(col))
 		}
 	}
 	return strings.Join(columnList, ", ")
@@ -197,52 +198,46 @@ func buildOrderByClause(table schema.Table, order []OrderParam, args *argList) (
 
 // Build INSERT query from table schema and data
 func buildInsertQuery(table schema.Table, data map[string]any, headers *Headers) (string, []any, error) {
-	// Initialize query builder
 	var query strings.Builder
-	var args []any
-	var argIndex int = 1
+	var args argList
 
 	// Start INSERT statement
-	query.WriteString(fmt.Sprintf("INSERT INTO \"%s\".\"%s\" (", table.Schema, table.Name))
+	query.WriteString("INSERT INTO ")
+	query.WriteString(pgx.Identifier{table.Schema, table.Name}.Sanitize())
+	query.WriteString(" (")
 
-	// Add columns and values
+	// Add columns and values. Keys are sorted so the generated SQL is
+	// deterministic: one prepared statement per set of columns rather than one
+	// per order they happened to arrive in.
 	columns := make([]string, 0, len(data))
-	placeholders := make([]string, 0, len(data))
-
-	for key, value := range data {
-		// Verify column exists in schema
-		found := false
-		for _, col := range table.Columns {
-			if col.Name == key {
-				found = true
-				break
-			}
+	values := make([]string, 0, len(data))
+	for _, key := range slices.Sorted(maps.Keys(data)) {
+		col, ok := findColumn(table, key)
+		if !ok {
+			return "", nil, fmt.Errorf("column %s.%s does not exist", table.Name, key)
 		}
-
-		if found {
-			columns = append(columns, fmt.Sprintf("\"%s\"", key))
-			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
-			args = append(args, value)
-			argIndex++
+		value, err := columnValueExpression(col, data[key], &args)
+		if err != nil {
+			return "", nil, err
 		}
+		columns = append(columns, quoteIdent(col.Name))
+		values = append(values, value)
+	}
+
+	if len(columns) == 0 {
+		return "", nil, fmt.Errorf("no valid columns to insert")
 	}
 
 	// Complete the query
 	query.WriteString(strings.Join(columns, ", "))
 	query.WriteString(") VALUES (")
-	query.WriteString(strings.Join(placeholders, ", "))
+	query.WriteString(strings.Join(values, ", "))
 	query.WriteString(")")
 
 	// Add RETURNING clause only if requested
 	if headers != nil && headers.Prefer != nil && headers.Prefer.WantsRepresentation() {
 		query.WriteString(" RETURNING ")
-
-		returningCols := make([]string, 0, len(table.Columns))
-		for _, col := range table.Columns {
-			returningCols = append(returningCols, columnCastExpression(col.Name, col.DataType))
-		}
-
-		query.WriteString(strings.Join(returningCols, ", "))
+		query.WriteString(returningList(table))
 	}
 
 	return query.String(), args, nil
@@ -255,23 +250,22 @@ func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParam
 	var args argList
 
 	// Start UPDATE statement
-	query.WriteString(fmt.Sprintf("UPDATE \"%s\".\"%s\" SET ", table.Schema, table.Name))
+	query.WriteString("UPDATE ")
+	query.WriteString(pgx.Identifier{table.Schema, table.Name}.Sanitize())
+	query.WriteString(" SET ")
 
-	// Add SET clause
+	// Add SET clause, sorted for the same reason as INSERT
 	setClauses := make([]string, 0, len(data))
-	for key, value := range data {
-		// Verify column exists in schema
-		found := false
-		for _, col := range table.Columns {
-			if col.Name == key {
-				found = true
-				break
-			}
+	for _, key := range slices.Sorted(maps.Keys(data)) {
+		col, ok := findColumn(table, key)
+		if !ok {
+			return "", nil, fmt.Errorf("column %s.%s does not exist", table.Name, key)
 		}
-
-		if found {
-			setClauses = append(setClauses, fmt.Sprintf("\"%s\" = %s", key, args.add(value)))
+		value, err := columnValueExpression(col, data[key], &args)
+		if err != nil {
+			return "", nil, err
 		}
+		setClauses = append(setClauses, quoteIdent(col.Name)+" = "+value)
 	}
 
 	if len(setClauses) == 0 {
@@ -293,13 +287,7 @@ func buildUpdateQuery(table schema.Table, data map[string]any, params QueryParam
 	// Add RETURNING clause only if requested (to return the updated row/s)
 	if headers != nil && headers.Prefer != nil && headers.Prefer.WantsRepresentation() {
 		query.WriteString(" RETURNING ")
-
-		returningCols := make([]string, 0, len(table.Columns))
-		for _, col := range table.Columns {
-			returningCols = append(returningCols, columnCastExpression(col.Name, col.DataType))
-		}
-
-		query.WriteString(strings.Join(returningCols, ", "))
+		query.WriteString(returningList(table))
 	}
 
 	return query.String(), args, nil
@@ -312,7 +300,8 @@ func buildDeleteQuery(table schema.Table, params QueryParams, headers *Headers) 
 	var args argList
 
 	// Start DELETE statement
-	query.WriteString(fmt.Sprintf("DELETE FROM \"%s\".\"%s\"", table.Schema, table.Name))
+	query.WriteString("DELETE FROM ")
+	query.WriteString(pgx.Identifier{table.Schema, table.Name}.Sanitize())
 
 	// Add WHERE clause for filters (same PostgREST filtering as SELECT)
 	where, err := buildWhereClause(table, params.Filters, &args)
@@ -327,30 +316,67 @@ func buildDeleteQuery(table schema.Table, params QueryParams, headers *Headers) 
 	// Add RETURNING clause only if requested (to return the deleted row/s)
 	if headers != nil && headers.Prefer != nil && headers.Prefer.WantsRepresentation() {
 		query.WriteString(" RETURNING ")
-
-		returningCols := make([]string, 0, len(table.Columns))
-		for _, col := range table.Columns {
-			returningCols = append(returningCols, columnCastExpression(col.Name, col.DataType))
-		}
-
-		query.WriteString(strings.Join(returningCols, ", "))
+		query.WriteString(returningList(table))
 	}
 
 	return query.String(), args, nil
 }
 
-// columnCastExpression returns appropriate type casting of a column used in SELECT query
-func columnCastExpression(columnName string, dataType string) string {
-	switch dataType {
-	case "uuid":
-		return fmt.Sprintf("\"%s\"::TEXT as \"%s\"", columnName, columnName)
-	case "time without time zone":
-		return fmt.Sprintf("\"%s\"::TEXT as \"%s\"", columnName, columnName)
-	case "date":
-		return fmt.Sprintf("\"%s\"::TEXT as \"%s\"", columnName, columnName)
-	default:
-		return fmt.Sprintf("\"%s\"", columnName)
+// returningList renders every column for a RETURNING clause, cast exactly as
+// selectList casts it, so a POST with Prefer: return=representation answers in
+// the shape a GET does.
+func returningList(table schema.Table) string {
+	cols := make([]string, 0, len(table.Columns))
+	for _, col := range table.Columns {
+		cols = append(cols, columnCastExpression(col))
 	}
+	return strings.Join(cols, ", ")
+}
+
+// columnCastExpression renders a column for a SELECT or RETURNING list.
+//
+// pgx decodes by type OID and has no codec for a type this database defines, so
+// for those it falls back to the wire text -- for a composite, postgres' own
+// '(a,b,"c, d")' literal, which reaches the client as a JSON string it then has
+// to parse. to_jsonb hands pgx a jsonb instead, which JSONCodec unmarshals into
+// a map, so the response carries a nested object; an array of composites
+// likewise becomes an array of objects.
+//
+// Domains are unaffected: information_schema reports a domain column as its
+// base type, so account.amount stays 'numeric' and keeps numeric's codec.
+func columnCastExpression(col schema.Column) string {
+	ident := quoteIdent(col.Name)
+	switch {
+	case col.IsComposite():
+		return "to_jsonb(" + ident + ") AS " + ident
+	case col.DataType == "uuid",
+		col.DataType == "date",
+		col.DataType == "time without time zone":
+		return ident + "::TEXT AS " + ident
+	default:
+		return ident
+	}
+}
+
+// columnValueExpression renders the VALUES or SET expression for one column.
+//
+// An object bound for a composite column goes down as jsonb and postgres
+// assembles the composite from it, because pgx cannot encode a map into a type
+// it has no codec for. A string is passed through untouched: that is postgres'
+// own composite literal, which is what clients send today.
+func columnValueExpression(col schema.Column, value any, args *argList) (string, error) {
+	if value == nil || col.TypeKind != schema.KindComposite {
+		return args.add(value), nil
+	}
+	if _, ok := value.(string); ok {
+		return args.add(value), nil
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "", fmt.Errorf("column %s: %w", col.Name, err)
+	}
+	composite := pgx.Identifier{col.UDTSchema, col.UDTName}.Sanitize()
+	return "jsonb_populate_record(NULL::" + composite + ", " + args.add(string(encoded)) + "::jsonb)", nil
 }
 
 // collectRowsOmitNull collects rows and omits NULL values from the result maps

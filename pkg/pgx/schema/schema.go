@@ -44,11 +44,38 @@ type Table struct {
 	ViewQuery   string       `json:"view_query,omitempty"`
 }
 
+// TypeKind is pg_type.typtype for a column's type. information_schema reports
+// every composite, enum and range column as 'USER-DEFINED', which is not enough
+// to decide how a column should be sent. A domain column is reported as its
+// base type, so a domain takes the kind of whatever it is built on.
+type TypeKind string
+
+const (
+	KindBase       TypeKind = "b"
+	KindComposite  TypeKind = "c"
+	KindDomain     TypeKind = "d"
+	KindEnum       TypeKind = "e"
+	KindPseudo     TypeKind = "p"
+	KindRange      TypeKind = "r"
+	KindMultiRange TypeKind = "m"
+)
+
 type Column struct {
-	Name         string `json:"name"`
-	DataType     string `json:"data_type"`
-	IsNullable   bool   `json:"is_nullable"`
-	IsPrimaryKey bool   `json:"is_primary_key"`
+	Name         string   `json:"name"`
+	DataType     string   `json:"data_type"`
+	UDTSchema    string   `json:"udt_schema,omitempty"`
+	UDTName      string   `json:"udt_name,omitempty"`
+	TypeKind     TypeKind `json:"type_kind,omitempty"`
+	ElemKind     TypeKind `json:"elem_kind,omitempty"`
+	IsNullable   bool     `json:"is_nullable"`
+	IsPrimaryKey bool     `json:"is_primary_key"`
+}
+
+// IsComposite reports whether pgx has no codec for this column's type and so
+// falls back to postgres' text output: true of a composite, and of an array of
+// composites, whose kind is on the element rather than the column.
+func (c Column) IsComposite() bool {
+	return c.TypeKind == KindComposite || c.ElemKind == KindComposite
 }
 
 type ForeignKey struct {
@@ -273,6 +300,10 @@ func queryColumns(ctx context.Context, conn pg.Conn, schema, table string) ([]Co
 		SELECT
 			c.column_name,
 			c.data_type,
+			c.udt_schema,
+			c.udt_name,
+			t.typtype,
+			e.typtype,
 			c.is_nullable = 'YES',
 			EXISTS (
 				SELECT 1 FROM information_schema.table_constraints tc
@@ -285,6 +316,9 @@ func queryColumns(ctx context.Context, conn pg.Conn, schema, table string) ([]Co
 					AND kcu.column_name = c.column_name
 			) AS is_primary_key
 		FROM information_schema.columns c
+		LEFT JOIN pg_namespace n ON n.nspname = c.udt_schema
+		LEFT JOIN pg_type t ON t.typname = c.udt_name AND t.typnamespace = n.oid
+		LEFT JOIN pg_type e ON e.oid = t.typelem AND t.typcategory = 'A'
 		WHERE c.table_schema = $1 AND c.table_name = $2`, schema, table)
 	if err != nil {
 		return nil, nil, err
@@ -295,8 +329,16 @@ func queryColumns(ctx context.Context, conn pg.Conn, schema, table string) ([]Co
 	var pkeys []string
 	for rows.Next() {
 		var col Column
-		if err := rows.Scan(&col.Name, &col.DataType, &col.IsNullable, &col.IsPrimaryKey); err != nil {
+		var kind, elemKind *string // null when the type is not found in pg_type
+		if err := rows.Scan(&col.Name, &col.DataType, &col.UDTSchema, &col.UDTName,
+			&kind, &elemKind, &col.IsNullable, &col.IsPrimaryKey); err != nil {
 			return nil, nil, err
+		}
+		if kind != nil {
+			col.TypeKind = TypeKind(*kind)
+		}
+		if elemKind != nil {
+			col.ElemKind = TypeKind(*elemKind)
 		}
 		cols = append(cols, col)
 		if col.IsPrimaryKey {
